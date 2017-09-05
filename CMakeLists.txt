@@ -45,6 +45,9 @@ ELSE(FUSE_FOUND)
     MESSAGE(FATAL_ERROR "Failed to find Linux FUSE libraries or include files.")
 ENDIF(FUSE_FOUND)
 
+find_program(VALGRIND_BINARY valgrind)
+set(VALGRIND_OPTIONS --tool=memcheck --leak-check=full --trace-children=yes --error-exitcode=99)
+
 add_executable(kibosh
     fault.c
     file.c
@@ -67,6 +70,9 @@ target_link_libraries(kibosh
 
 macro(add_utest utest)
     add_test(${utest} ${CMAKE_CURRENT_BINARY_DIR}/${utest} ${utest})
+    if (VALGRIND_BINARY)
+        add_test(valgrind_${utest} ${VALGRIND_BINARY} ${VALGRIND_OPTIONS} ${CMAKE_CURRENT_BINARY_DIR}/${utest} valgrind_${utest})
+    endif (VALGRIND_BINARY)
 endmacro(add_utest)
 
 add_library(utest
