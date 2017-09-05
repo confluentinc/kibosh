@@ -31,7 +31,7 @@ static int test_write_pidfile(void)
         tmp = "/dev/shm";
     snprintf(path, sizeof(path), "%s/pid_file.%lld.%d", tmp, (long long)getpid(), rand());
     EXPECT_INT_ZERO(write_pidfile(path));
-    memset(buf, sizeof(buf), 0);
+    memset(buf, 0, sizeof(buf));
     EXPECT_INT_ZERO(read_string_from_file(path, buf, sizeof(buf)));
     snprintf(expected, sizeof(expected), "%lld\n", (long long)getpid());
     EXPECT_STR_EQ(expected, buf);
