@@ -54,7 +54,7 @@ int kibosh_fs_alloc(struct kibosh_fs **out, const char *root)
 {
     int ret;
     struct kibosh_fs *fs;
-    char *path;
+    char *path, *buf = NULL;
 
     *out = NULL;
     fs = calloc(1, sizeof(*fs));
@@ -94,15 +94,10 @@ int kibosh_fs_alloc(struct kibosh_fs **out, const char *root)
         kibosh_fs_free(fs);
         return ret;
     }
-    ret = safe_write(fs->control_fd, FAULTS_EMPTY_JSON, strlen(FAULTS_EMPTY_JSON) + 1);
+    ret = faults_calloc(&fs->faults);
     if (ret < 0) {
-        INFO("kibosh_fs_alloc: failed to write initial JSON to control file: %s\n", safe_strerror(-ret));
-        kibosh_fs_free(fs);
-        return ret;
-    }
-    ret = faults_parse(FAULTS_EMPTY_JSON, &fs->faults);
-    if (ret < 0) {
-        INFO("kibosh_fs_alloc: failed to parse empty faults json %s\n", FAULTS_EMPTY_JSON);
+        INFO("kibosh_fs_alloc: faults_calloc failed: error %d (%s)\n",
+             ret, safe_strerror(-ret));
         kibosh_fs_free(fs);
         return ret;
     }
@@ -110,6 +105,21 @@ int kibosh_fs_alloc(struct kibosh_fs **out, const char *root)
     if (!fs->control_buf) {
         ret = -ENOMEM;
         INFO("kibosh_fs_alloc: failed to allocate control buffer.\n");
+        kibosh_fs_free(fs);
+        return ret;
+    }
+    buf = faults_unparse(fs->faults);
+    if (!buf) {
+        ret = -ENOMEM;
+        INFO("kibosh_fs_alloc: faults_unparse: failed to unparse "
+             "default faults.\n");
+        kibosh_fs_free(fs);
+        return ret;
+    }
+    ret = safe_write(fs->control_fd, buf, strlen(buf));
+    free(buf);
+    if (ret < 0) {
+        INFO("kibosh_fs_alloc: failed to write initial JSON to control file: %s\n", safe_strerror(-ret));
         kibosh_fs_free(fs);
         return ret;
     }

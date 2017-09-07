@@ -118,6 +118,22 @@ void kibosh_fault_base_free(struct kibosh_fault_base *fault)
     }
 }
 
+int faults_calloc(struct kibosh_faults **out)
+{
+    struct kibosh_faults *faults;
+
+    faults = calloc(1, sizeof(struct kibosh_faults));
+    if (!faults)
+        return -ENOMEM;
+    faults->list = calloc(1, sizeof(struct kibosh_fault_base *));
+    if (!faults->list) {
+        free(faults);
+        return -ENOMEM;
+    }
+    *out = faults;
+    return 0;
+}
+
 /**
  * kibosh_faults 
  */

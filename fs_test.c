@@ -40,6 +40,18 @@ static void print_usage(void)
 "fs_unit [test_path]\n");
 }
 
+static int test_empty_control_file(const char *base)
+{
+    char buf[16384], control_path[PATH_MAX];
+
+    snprintf(control_path, sizeof(control_path), "%s%s", base, KIBOSH_CONTROL_PATH);
+    memset(&buf, 0, sizeof(buf));
+    EXPECT_POSIX_SUCC(read_string_from_file(control_path, buf, sizeof(buf)));
+    EXPECT_STR_EQ("{\"faults\":[]}", buf);
+
+    return 0;
+}
+
 static int test_create_and_remove_subdir(const char *base)
 {
     char subdir1[PATH_MAX];
@@ -143,6 +155,8 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
     base = argv[1];
+
+    EXPECT_INT_ZERO(test_empty_control_file(base));
 
     EXPECT_INT_ZERO(test_create_and_remove_subdir(base));
 

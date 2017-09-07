@@ -62,6 +62,15 @@ struct kibosh_faults {
 };
 
 /**
+ * Allocate an empty Kibosh faults structure.
+ *
+ * @param out       (out parameter) the new Kibosh faults structre
+ *
+ * @return          0 on sucess, or the negative error code on error.
+ */
+int faults_calloc(struct kibosh_faults **out);
+
+/**
  * Parse a JSON string as a fault object.
  *
  * @param str       The string to parse.
@@ -98,11 +107,6 @@ int kibosh_fault_base_check(struct kibosh_fault_base *fault, const char *path, c
  * @param fault     The fault object.
  */
 void kibosh_fault_base_free(struct kibosh_fault_base *fault);
-
-/**
- * JSON for an empty kibosh_faults object.
- */
-#define FAULTS_EMPTY_JSON "{\"faults\":[]}"
 
 /**
  * Parse a JSON string as a faults object.
