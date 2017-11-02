@@ -65,8 +65,19 @@ static void kibosh_destroy(void *fs)
 
 static void kibosh_usage(const char *argv0)
 {
-    fprintf(stderr, "\
-usage:  %s [FUSE and mount options] <root> <mount_point>\n", argv0);
+    fprintf(stderr,
+"Kibosh: the fault-injecting filesystem.\n"
+"\n"
+"Kibosh is a FUSE daemon which allows you to inject arbitrary filesystem\n"
+"errors into your applications for testing purposes.\n"
+"\n"
+"It exports a view of an existing directory.  By default this view is an\n"
+"exact recreation of what is at the directory.  However, we can add\n"
+"distortions to the view by enabling faults.  This allows injecting I/O\n"
+"errors, slow behavior, and so forth, without modifying the underlying\n"
+"target directory.\n"
+"\n"
+"usage:  %s [FUSE and mount options] <target> <mirror>\n", argv0);
 }
 
 /**
