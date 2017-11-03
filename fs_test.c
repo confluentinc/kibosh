@@ -88,14 +88,15 @@ static int test_create_and_remove_nested(const char *base)
     return 0;
 }
 
-static int create_read_fault(const char *base, int code)
+static int create_read_fault(const char *base, const char *prefix, int code)
 {
     char json[256];
     char control_path[PATH_MAX];
 
     snprintf(control_path, sizeof(control_path), "%s%s", base, KIBOSH_CONTROL_PATH);
     snprintf(json, sizeof(json),
-        "{\"faults\":[{\"type\":\"unreadable\", \"code\":%d}]}", code);
+        "{\"faults\":[{\"type\":\"unreadable\", \"prefix\":\"%s\", \"code\":%d}]}",
+        prefix, code);
     EXPECT_INT_ZERO(write_string_to_file(control_path, json));
     return 0;
 }
@@ -116,7 +117,7 @@ static int test_create_and_read_file(const char *base, int read_fault)
     unsigned int i;
     int fd;
     char test_string[16384], test_string2[16384];
-    char nest4[PATH_MAX], test_path[PATH_MAX];
+    char nest4[PATH_MAX], test_path[PATH_MAX], test_path2[PATH_MAX];
 
     snprintf(nest4, sizeof(nest4), "%s/nest4", base);
     EXPECT_POSIX_FAIL(access(nest4, F_OK), ENOENT);
@@ -128,8 +129,10 @@ static int test_create_and_read_file(const char *base, int read_fault)
     }
     test_string[(sizeof(test_string) / sizeof(test_string[0])) - 1] = '\0';
     EXPECT_INT_ZERO(write_string_to_file(test_path, test_string));
+    snprintf(test_path2, sizeof(test_path2), "%s/test_file2", base);
+    EXPECT_INT_ZERO(write_string_to_file(test_path2, test_string));
     if (read_fault) {
-        EXPECT_INT_ZERO(create_read_fault(base, read_fault));
+        EXPECT_INT_ZERO(create_read_fault(base, "/nest4", read_fault));
         fd = open(test_path, O_RDONLY, 0666);
         if (fd < 0) {
             EXPECT_POSIX_SUCC(fd);
@@ -141,6 +144,8 @@ static int test_create_and_read_file(const char *base, int read_fault)
         EXPECT_INT_ZERO(read_string_from_file(test_path, test_string2, sizeof(test_string2)));
         EXPECT_STR_EQ(test_string, test_string2);
     }
+    EXPECT_INT_ZERO(read_string_from_file(test_path2, test_string2, sizeof(test_string2)));
+    EXPECT_STR_EQ(test_string, test_string2);
     EXPECT_INT_ZERO(recursive_unlink(nest4));
     EXPECT_POSIX_FAIL(access(nest4, F_OK), ENOENT);
     return 0;

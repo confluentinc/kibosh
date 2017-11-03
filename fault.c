@@ -34,13 +34,19 @@
  */
 static struct kibosh_fault_unreadable *kibosh_fault_unreadable_parse(json_value *obj)
 {
-    struct kibosh_fault_unreadable *fault;
-    json_value *code_obj;
+    struct kibosh_fault_unreadable *fault = NULL;
+    json_value *code_obj = NULL;
+    json_value *prefix_obj = NULL;
 
     code_obj = get_child(obj, "code");
     if ((!code_obj) || (code_obj->type != json_integer)) {
         INFO("kibosh_fault_unreadable_parse: No \"code\" field found in fault object.");
-        return NULL;
+        goto error;
+    }
+    prefix_obj = get_child(obj, "prefix");
+    if ((!prefix_obj) || (prefix_obj->type != json_string)) {
+        INFO("kibosh_fault_unreadable_parse: No \"prefix\" field found in fault object.");
+        goto error;
     }
     fault = calloc(1, sizeof(*fault));
     if (!fault) {
@@ -48,27 +54,48 @@ static struct kibosh_fault_unreadable *kibosh_fault_unreadable_parse(json_value 
         return NULL;
     }
     snprintf(fault->base.type, KIBOSH_FAULT_TYPE_STR_LEN, "%s", KIBOSH_FAULT_TYPE_UNREADABLE);
+    fault->prefix = strdup(prefix_obj->u.string.ptr);
+    if (!fault->prefix) {
+        INFO("kibosh_fault_unreadable_parse: OOM");
+        goto error;
+    }
     fault->code = code_obj->u.integer;
     return fault;
+
+error:
+    if (fault) {
+        free(fault->prefix);
+        free(fault);
+    }
+    return NULL;
 }
 
 static char *kibosh_fault_unreadable_unparse(struct kibosh_fault_unreadable *fault)
 {
-    return dynprintf("{\"type\":\"unreadable\", \"code\":%d}", fault->code);
+    return dynprintf("{\"type\":\"unreadable\", "
+                     "\"prefix\":\"%s\", "
+                     "\"code\":%d}",
+                     fault->prefix, fault->code);
 }
 
-static int kibosh_fault_unreadable_check(struct kibosh_fault_unreadable *fault, const char *path UNUSED,
+static int kibosh_fault_unreadable_check(struct kibosh_fault_unreadable *fault, const char *path,
                                          const char *op)
 {
-    if (strcmp(op, "read") == 0) {
-        return fault->code;
+    if (strcmp(op, "read") != 0) {
+        return 0;
     }
-    return 0;
+    if (strncmp(path, fault->prefix, strlen(fault->prefix)) != 0) {
+        return 0;
+    }
+    return fault->code;
 }
 
 static void kibosh_fault_unreadable_free(struct kibosh_fault_unreadable *fault)
 {
-    free(fault);
+    if (fault) {
+        free(fault->prefix);
+        free(fault);
+    }
 }
 
 /**

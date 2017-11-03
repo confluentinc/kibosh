@@ -49,6 +49,11 @@ struct kibosh_fault_unreadable {
     struct kibosh_fault_base base;
 
     /**
+     * The path prefix.
+     */
+    char *prefix;
+
+    /**
      * The error code to return from read faults.
      */
     int code;

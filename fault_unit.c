@@ -25,11 +25,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-static struct kibosh_fault_unreadable *kibosh_fault_unreadable_alloc(int code)
+static struct kibosh_fault_unreadable *kibosh_fault_unreadable_alloc(int code,
+                                                                     const char *prefix)
 {
     struct kibosh_fault_unreadable *fault;
     fault = calloc(1, sizeof(*fault));
     snprintf(fault->base.type, KIBOSH_FAULT_TYPE_STR_LEN, "%s", KIBOSH_FAULT_TYPE_UNREADABLE);
+    fault->prefix = strdup(prefix);
+    if (!fault->prefix)
+        abort();
     fault->code = code;
     return fault;
 }
@@ -71,13 +75,13 @@ static struct kibosh_faults *kibosh_faults_alloc(void *first, ...)
 
 static int test_fault_unparse(void)
 {
-    struct kibosh_fault_unreadable *fault = kibosh_fault_unreadable_alloc(101);
+    struct kibosh_fault_unreadable *fault = kibosh_fault_unreadable_alloc(101, "/foo/bar");
     char *str;
 
     EXPECT_NONNULL(fault);
     EXPECT_INT_EQ(101, fault->code);
     str = kibosh_fault_base_unparse((struct kibosh_fault_base*)fault);
-    EXPECT_STR_EQ("\{\"type\":\"unreadable\", \"code\":101}", str);
+    EXPECT_STR_EQ("\{\"type\":\"unreadable\", \"prefix\":\"/foo/bar\", \"code\":101}", str);
     free(str);
     kibosh_fault_base_free((struct kibosh_fault_base*)fault);
     return 0;
@@ -89,17 +93,17 @@ static int test_faults_unparse(void)
     struct kibosh_faults *faults;
     char *str;
 
-    fault = kibosh_fault_unreadable_alloc(101);
+    fault = kibosh_fault_unreadable_alloc(101, "/x");
     EXPECT_NONNULL(fault);
-    fault2 = kibosh_fault_unreadable_alloc(102);
+    fault2 = kibosh_fault_unreadable_alloc(102, "/y");
     EXPECT_NONNULL(fault2);
     faults = kibosh_faults_alloc(fault, fault2, NULL);
     EXPECT_NONNULL(faults);
 
     str = faults_unparse(faults);
     EXPECT_STR_EQ("{\"faults\":["
-                           "{\"type\":\"unreadable\", \"code\":101}, "
-                           "{\"type\":\"unreadable\", \"code\":102}]}", str);
+                           "{\"type\":\"unreadable\", \"prefix\":\"/x\", \"code\":101}, "
+                           "{\"type\":\"unreadable\", \"prefix\":\"/y\", \"code\":102}]}", str);
     free(str);
     faults_free(faults);
     return 0;
@@ -109,8 +113,8 @@ static int test_fault_parse(void)
 {
     struct kibosh_fault_unreadable *unreadable;
     const char *str = "{\"faults\":["
-                           "{\"type\":\"unreadable\", \"code\":1}, "
-                           "{\"type\":\"unreadable\", \"code\":2}]}";
+                           "{\"type\":\"unreadable\", \"prefix\":\"/z\", \"code\":1}, "
+                           "{\"type\":\"unreadable\", \"prefix\":\"/x\", \"code\":2}]}";
     struct kibosh_faults *faults = NULL;
     EXPECT_INT_ZERO(faults_parse(str, &faults));
     EXPECT_NONNULL(faults);
