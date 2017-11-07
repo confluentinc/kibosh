@@ -107,7 +107,10 @@ int main(int argc, char *argv[])
     struct kibosh_fs *fs = NULL;
     struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
     struct kibosh_conf *conf = NULL;
+    FILE *log_file = NULL;
+    char *conf_str = NULL;
 
+    INFO("kibosh_main: starting Kibosh.\n");
     conf = kibosh_conf_alloc();
     if (!conf) {
         INFO("kibosh_main: OOM while allocating kibosh_conf.\n");
@@ -140,6 +143,12 @@ int main(int argc, char *argv[])
         INFO("kibosh_main: kibosh_conf_reify failed.\n");
         goto done;
     }
+    conf_str = kibosh_conf_to_str(conf);
+    if (!conf_str) {
+        INFO("kibosh_main: kibosh_conf_to_str got out of memory.\n");
+        goto done;
+    }
+    INFO("kibosh_main: configured %s.\n", conf_str);
 
     if (chdir("/") < 0) {
         int err = errno;
@@ -160,13 +169,36 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (conf->log_path) {
+        log_file = fopen(conf->log_path, "w");
+        if (!log_file) {
+            int err = -errno;
+            INFO("kibosh_main: failed to open log file %s: error %d  (%s)\n",
+                 conf->log_path, -err, safe_strerror(-err));
+            goto done;
+        }
+        setvbuf(log_file, NULL, _IOLBF, 8192);
+    }
+
+    kibosh_log_init((log_file ? log_file : stdout),
+                    (conf->verbose ? KIBOSH_LOG_ALL_ENABLED : 0));
+
+    if (conf->log_path) {
+        INFO("kibosh_main: configured %s.\n", conf_str);
+    }
+
     /* Run main FUSE loop. */
     ret = fuse_main(args.argc, args.argv, &kibosh_oper, fs);
 
 done:
     fuse_opt_free_args(&args);
     kibosh_conf_free(conf);
-    INFO("kibosh_main exiting with error code %d\n", ret);
+    free(conf_str);
+    if (log_file) {
+        fclose(log_file);
+        log_file = NULL;
+    }
+    INFO("kibosh_main exiting with error code %d.\n", ret);
     return ret;
 }
 

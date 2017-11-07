@@ -31,8 +31,8 @@ struct fuse_opt kibosh_command_line_options[] = {
      KIBOSH_CONF_OPT("--pidfile=%s", pidfile_path, 0),
      KIBOSH_CONF_OPT("--log=%s", log_path, 0),
      KIBOSH_CONF_OPT("--target=%s", target_path, 0),
-     KIBOSH_CONF_OPT("-v", verbose, 0),
-     KIBOSH_CONF_OPT("--verbose", verbose, 0),
+     KIBOSH_CONF_OPT("-v", verbose, 1),
+     KIBOSH_CONF_OPT("--verbose", verbose, 1),
      FUSE_OPT_KEY("-h", KIBOSH_CLI_GENERAL_HELP_KEY),
      FUSE_OPT_KEY("--help", KIBOSH_CLI_GENERAL_HELP_KEY),
      FUSE_OPT_KEY("--fuse-help", KIBOSH_CLI_FUSE_HELP_KEY),
@@ -118,6 +118,25 @@ int kibosh_conf_reify(struct kibosh_conf *conf)
         return -1;
     }
     return 0;
+}
+
+#define QUOTE_OR_NOT(s) (s ? "\"" : "")
+#define STR_OR_NULL(s) (s ? s : "null")
+
+#define STR_PARAMS(s) QUOTE_OR_NOT(s), STR_OR_NULL(s), QUOTE_OR_NOT(s)
+
+char *kibosh_conf_to_str(const struct kibosh_conf *conf)
+{
+    return dynprintf("{"
+        "pidfile_path=%s%s%s, "
+        "log_path=%s%s%s, "
+        "target_path=%s%s%s, "
+        "verbose=%d"
+        "}",
+        STR_PARAMS(conf->pidfile_path),
+        STR_PARAMS(conf->log_path),
+        STR_PARAMS(conf->target_path),
+        conf->verbose);
 }
 
 // vim: ts=4:sw=4:tw=99:et

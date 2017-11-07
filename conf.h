@@ -56,11 +56,15 @@ extern struct fuse_opt kibosh_command_line_options[];
 
 /**
  * Allocate a new kibosh_conf object.
+ *
+ * @return              The configuration, or NULL on OOM.
  */
 struct kibosh_conf *kibosh_conf_alloc(void);
 
 /**
  * Free a kibosh_conf object.
+ *
+ * @param conf          The configuration to free.
  */
 void kibosh_conf_free(struct kibosh_conf *conf);
 
@@ -69,8 +73,21 @@ void kibosh_conf_free(struct kibosh_conf *conf);
  *
  * Resolves relative paths into absolute paths.
  * Verifies that required fields are present.
+ *
+ * @param conf          The configuration.  Will be modified.
+ *
+ * @return              0 on success; a negative error code on error.
  */
 int kibosh_conf_reify(struct kibosh_conf *conf);
+
+/**
+ * Returns a string representation of this configuration.
+ *
+ * @param conf          The configuration.
+ *
+ * @return              A malloced string, or NULL on OOM.
+ */
+char *kibosh_conf_to_str(const struct kibosh_conf *conf);
 
 #endif
 

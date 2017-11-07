@@ -159,21 +159,21 @@ int kibosh_getxattr(const char *path, const char *name, char *value, size_t size
     if (getxattr(bpath, name, value, size) < 0) {
         ret = -errno;
     }
-#ifdef DEBUG_ENABLED
-    if (ret == 0) {
-        nvalue = alloc_zterm_xattr(value, size);
-        if (!nvalue) {
-            ret = -ENOMEM;
-            goto done;
+    if (global_kibosh_log_settings & KIBOSH_LOG_DEBUG_ENABLED) {
+        if (ret == 0) {
+            nvalue = alloc_zterm_xattr(value, size);
+            if (!nvalue) {
+                ret = -ENOMEM;
+                goto done;
+            }
+            DEBUG("kibosh_getxattr(path=%s, bpath=%s, name=%s, value=%s) = 0\n",
+                  path, bpath, name, nvalue);
+        } else {
+            DEBUG("kibosh_getxattr(path=%s, bpath=%s, name=%s) = %d (%s)\n",
+                  path, bpath, name, -ret, safe_strerror(-ret));
         }
-        DEBUG("kibosh_getxattr(path=%s, bpath=%s, name=%s, value=%s) = 0\n",
-              path, bpath, name, nvalue);
-    } else {
-        DEBUG("kibosh_getxattr(path=%s, bpath=%s, name=%s) = %d (%s)\n",
-              path, bpath, name, -ret, safe_strerror(-ret));
     }
 done:
-#endif
     free(nvalue);
     return AS_FUSE_ERR(ret);
 }

@@ -116,8 +116,7 @@ static int kibosh_open_impl(const char *path, int addflags,
         type = KIBOSH_FILE_TYPE_NORMAL;
         ret = kibosh_open_normal_file_impl(path, flags, mode, info);
     }
-#ifdef DEBUG_ENABLED
-    {
+    if (global_kibosh_log_settings & KIBOSH_LOG_DEBUG_ENABLED) {
         char addflags_str[128] = { 0 };
         char flags_str[128] = { 0 };
         open_flags_to_str(addflags, addflags_str, sizeof(addflags_str));
@@ -126,7 +125,6 @@ static int kibosh_open_impl(const char *path, int addflags,
               "mode=%04o, type=%s) = %d\n", path, addflags_str, flags_str,
               mode, kibosh_file_type_str(type), ret);
     }
-#endif
     return AS_FUSE_ERR(ret);
 }
 
