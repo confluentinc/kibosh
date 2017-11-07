@@ -14,6 +14,7 @@
  * limitations under the License.
  **/
 
+#include "conf.h"
 #include "file.h"
 #include "fs.h"
 #include "log.h"
@@ -36,7 +37,7 @@
 static struct fuse_operations kibosh_oper;
 
 // FUSE options which we always set.
-static const char const *MANDATORY_OPTIONS[] = {
+static const char const *MANDATORY_FUSE_OPTIONS[] = {
     "-oallow_other", // Allow all users to access the mount point.
     "-odefault_permissions", // tell FUSE to do permission checking for us based on the reported permissions
     "-odirect_io", // Don't cache data in FUSE.
@@ -44,24 +45,8 @@ static const char const *MANDATORY_OPTIONS[] = {
     "-oatomic_o_trunc", // Pass O_TRUNC to open()
 };
 
-#define NUM_MANDATORY_OPTIONS \
-    (int)(sizeof(MANDATORY_OPTIONS)/sizeof(MANDATORY_OPTIONS[0]))
-
-static void *kibosh_init(struct fuse_conn_info *conn)
-{
-    conn->want = FUSE_CAP_ASYNC_READ |
-        FUSE_CAP_ATOMIC_O_TRUNC	|
-        FUSE_CAP_BIG_WRITES	|
-        FUSE_CAP_SPLICE_WRITE |
-        FUSE_CAP_SPLICE_MOVE |
-        FUSE_CAP_SPLICE_READ;
-    return fuse_get_context()->private_data;
-}
-
-static void kibosh_destroy(void *fs)
-{
-    kibosh_fs_free(fs);
-}
+#define NUM_MANDATORY_FUSE_OPTIONS \
+    (int)(sizeof(MANDATORY_FUSE_OPTIONS)/sizeof(MANDATORY_FUSE_OPTIONS[0]))
 
 static void kibosh_usage(const char *argv0)
 {
@@ -77,82 +62,55 @@ static void kibosh_usage(const char *argv0)
 "errors, slow behavior, and so forth, without modifying the underlying\n"
 "target directory.\n"
 "\n"
-"usage:  %s [FUSE and mount options] <target> <mirror>\n", argv0);
+"usage:\n"
+"    %s [options] <mirror>\n"
+"\n"
+"    The mirror directory is the mount point for the FUSE fs.\n"
+"\n"
+"options:\n"
+"    -f                  Enable foreground operation rather than daemonizing.\n"
+"    --log <path>        Write logs to the given path.\n"
+"    --pidfile <path>    Write a process ID file to the given path.\n"
+"                        This will be deleted if the process exits normally.\n"
+"    --target <path>     The directory which we are mirroring (required)\n"
+"    -v/--verbose        Turn on verbose logging.\n\n"
+"    -h/--help           This help text.\n\n"
+"    --fuse-help         Get help about possible FUSE options.\n"
+, argv0);
 }
 
-/**
- * Set up the fuse arguments we want to pass.
- *
- * We start with something like this:
- *     ./myapp [fuse-options] <overfs> <underfs>
- *
- * and end up with this:
- *     ./myapp [mandatory-fuse-options] [fuse-options] <overfs>
- */
-static int setup_kibosh_args(int argc, char **argv, struct fuse_args *args,
-                          char **mount_point)
+static int kibosh_process_option(void *data UNUSED, const char *arg UNUSED,
+                                 int key, struct fuse_args *outargs)
 {
-    int i, ret = 0;
-
-    *mount_point = NULL;
-    if ((argc < 3) || (argv[argc-2][0] == '-') || (argv[argc-1][0] == '-')) {
-        kibosh_usage(argv[0]);
-        ret = -EINVAL;
-        goto error;
+    // Process options which are not automatically handled by fuse_opt_parse.
+    switch (key) {
+        case KIBOSH_CLI_GENERAL_HELP_KEY:
+            kibosh_usage(outargs->argv[0]);
+            exit(0);
+            break;
+        case KIBOSH_CLI_FUSE_HELP_KEY:
+            fprintf(stderr, "Here are some FUSE options that can be supplied to Kibosh.\n"
+                    "Note that not all options here are usable.\n\n");
+            fuse_opt_add_arg(outargs, "-ho");
+            fuse_main(outargs->argc, outargs->argv, &kibosh_oper, NULL);
+            exit(0);
+            break;
+        default:
+            break;
     }
-    *mount_point = strdup(strdup(argv[argc - 1]));
-    if (!*mount_point) {
-        INFO("setup_kibosh_args: OOM\n");
-        ret = -ENOMEM;
-        goto error;
-    }
-    args->argc = NUM_MANDATORY_OPTIONS + argc - 2;
-    args->argv = calloc(sizeof(char*), args->argc + 1);
-    if (!args->argv) {
-        INFO("setup_kibosh_args: OOM\n");
-        ret = -ENOMEM;
-        goto error;
-    }
-    args->argv[0] = argv[0];
-    for (i = 0; i < NUM_MANDATORY_OPTIONS; i++) {
-        args->argv[i + 1] = (char*)MANDATORY_OPTIONS[i];
-    }
-    for (i = 1; i < argc - 2; i++) {
-        args->argv[NUM_MANDATORY_OPTIONS - 1 + i] = argv[i];
-    }
-    args->argv[args->argc - 1] = argv[argc - 2];
-    args->argv[args->argc] = NULL;
-    INFO("running fuse_main with: ");
-    for (i = 0; i < args->argc; i++) {
-        INFO("%s ", args->argv[i]);
-    }
-    INFO("\n ");
-    return 0;
-
-error:
-    if (*mount_point) {
-        free(*mount_point);
-        *mount_point = NULL;
-    }
-    if (args->argv) {
-        free(args->argv);
-        args->argv = NULL;
-    }
-    args->argc = 0;
-    return ret;
+    return 1;
 }
 
 int main(int argc, char *argv[])
 {
-    int ret = EXIT_FAILURE;
+    int i, ret = EXIT_FAILURE;
     struct kibosh_fs *fs = NULL;
-    struct fuse_args args;
-    char *root = NULL;
+    struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+    struct kibosh_conf *conf = NULL;
 
-    memset(&args, 0, sizeof(args));
-
-    if (chdir("/") < 0) {
-        perror("kibosh_main: failed to change directory to /");
+    conf = kibosh_conf_alloc();
+    if (!conf) {
+        INFO("kibosh_main: OOM while allocating kibosh_conf.\n");
         goto done;
     }
 
@@ -172,24 +130,60 @@ int main(int argc, char *argv[])
         goto done;
     }
 
-    /* Set up mandatory arguments. */
-    if (setup_kibosh_args(argc, argv, &args, &root) < 0) {
+    if (fuse_opt_parse(&args, conf, kibosh_command_line_options, 
+                        kibosh_process_option) < 0) {
+        INFO("kibosh_main: fuse_opt_parse failed.\n");
         goto done;
     }
 
-    if (kibosh_fs_alloc(&fs, root) < 0) {
+    if (kibosh_conf_reify(conf) < 0) {
+        INFO("kibosh_main: kibosh_conf_reify failed.\n");
+        goto done;
+    }
+
+    if (chdir("/") < 0) {
+        int err = errno;
+        INFO("kibosh_main: failed to change directory to /: error %d (%s)\n",
+             err, safe_strerror(err));
+        goto done;
+    }
+
+    if (kibosh_fs_alloc(&fs, conf) < 0) {
         INFO("kibosh_main: error initializing FS\n");
         goto done;
+    }
+
+    for (i = 0; i < NUM_MANDATORY_FUSE_OPTIONS; i++) {
+        if (fuse_opt_add_arg(&args, MANDATORY_FUSE_OPTIONS[i]) < 0) {
+            INFO("kibosh_main: out of memory allocating fuse args.\n");
+            goto done;
+        }
     }
 
     /* Run main FUSE loop. */
     ret = fuse_main(args.argc, args.argv, &kibosh_oper, fs);
 
 done:
-    free(args.argv);
-    free(root);
+    fuse_opt_free_args(&args);
+    kibosh_conf_free(conf);
     INFO("kibosh_main exiting with error code %d\n", ret);
     return ret;
+}
+
+static void *kibosh_init(struct fuse_conn_info *conn)
+{
+    conn->want = FUSE_CAP_ASYNC_READ |
+        FUSE_CAP_ATOMIC_O_TRUNC	|
+        FUSE_CAP_BIG_WRITES	|
+        FUSE_CAP_SPLICE_WRITE |
+        FUSE_CAP_SPLICE_MOVE |
+        FUSE_CAP_SPLICE_READ;
+    return fuse_get_context()->private_data;
+}
+
+static void kibosh_destroy(void *fs)
+{
+    kibosh_fs_free(fs);
 }
 
 static struct fuse_operations kibosh_oper = {

@@ -14,6 +14,7 @@
  * limitations under the License.
  **/
 
+#include "conf.h"
 #include "fault.h"
 #include "file.h"
 #include "fs.h"
@@ -50,11 +51,11 @@ static int kibosh_fs_alloc_oom(struct kibosh_fs *fs)
     return -ENOMEM;
 }
 
-int kibosh_fs_alloc(struct kibosh_fs **out, const char *root)
+int kibosh_fs_alloc(struct kibosh_fs **out, const struct kibosh_conf *conf)
 {
     int ret;
     struct kibosh_fs *fs;
-    char *path, *buf = NULL;
+    char *buf = NULL;
 
     *out = NULL;
     fs = calloc(1, sizeof(*fs));
@@ -67,7 +68,7 @@ int kibosh_fs_alloc(struct kibosh_fs **out, const char *root)
         return ret;
     }
     fs->control_fd = -1;
-    fs->root = strdup(root);
+    fs->root = strdup(conf->target_path);
     if (!fs->root)
         return kibosh_fs_alloc_oom(fs);
     if (access(fs->root, R_OK) < 0) {
@@ -76,9 +77,8 @@ int kibosh_fs_alloc(struct kibosh_fs **out, const char *root)
         kibosh_fs_free(fs);
         return ret;
     }
-    path = getenv(PIDFILE_PATH);
-    if (path) {
-        fs->pidfile_path = strdup(path);
+    if (conf->pidfile_path) {
+        fs->pidfile_path = strdup(conf->pidfile_path);
         if (!fs->pidfile_path)
             return kibosh_fs_alloc_oom(fs);
         ret = write_pidfile(fs->pidfile_path);

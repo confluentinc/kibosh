@@ -22,6 +22,7 @@
 #define KIBOSH_CONTROL          "kibosh_control"
 #define KIBOSH_CONTROL_PATH     ("/" KIBOSH_CONTROL)
 
+struct kibosh_conf;
 struct stat;
 
 struct kibosh_fs {
@@ -60,11 +61,11 @@ struct kibosh_fs {
  * Allocate a new kibosh_fs object.
  *
  * @param out       (out param) the new FS object.
- * @param root      The path to the root.  This string will be copied.
+ * @param conf      The configuration to use.
  *
  * @return          0 on success; a negative error code otherwise.
  */
-int kibosh_fs_alloc(struct kibosh_fs **out, const char *root);
+int kibosh_fs_alloc(struct kibosh_fs **out, const struct kibosh_conf *conf);
 
 /**
  * Free a kibosh_fs object.

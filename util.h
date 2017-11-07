@@ -40,7 +40,7 @@ int snappend(char *str, size_t str_len, const char *fmt, ...)
  * @param fmt       The format string.
  * @param ...       Printf-style arguments
  *
- * @return          0 on success; NULL on OOM
+ * @return          The dynamically allocated string on success; NULL on OOM
  */
 char *dynprintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 

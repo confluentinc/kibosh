@@ -49,6 +49,7 @@ find_program(VALGRIND_BINARY valgrind)
 set(VALGRIND_OPTIONS --tool=memcheck --leak-check=full --trace-children=yes --error-exitcode=99)
 
 add_executable(kibosh
+    conf.c
     fault.c
     file.c
     fs.c
