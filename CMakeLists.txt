@@ -59,6 +59,7 @@ add_executable(kibosh
     main.c
     meta.c
     pid.c
+    signal.c
     test.c
     util.c
 )
@@ -84,6 +85,7 @@ target_link_libraries(utest pthread)
 add_executable(conf_unit
     conf.c
     conf_unit.c
+    io.c
     log.c
     test.c
     util.c
@@ -94,6 +96,7 @@ add_utest(conf_unit)
 add_executable(fault_unit
     fault.c
     fault_unit.c
+    io.c
     json.c
     log.c
     test.c
@@ -112,6 +115,7 @@ add_executable(fs_test
 target_link_libraries(fs_test utest)
 
 add_executable(log_unit
+    io.c
     log_unit.c
     log.c
     test.c
@@ -131,6 +135,7 @@ target_link_libraries(pid_unit utest m)
 add_utest(pid_unit)
 
 add_executable(util_unit
+    io.c
     log.c
     util_unit.c
     util.c

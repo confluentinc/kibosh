@@ -14,10 +14,12 @@
  * limitations under the License.
  **/
 
+#include "io.h"
 #include "test.h"
 #include "util.h"
 
 #include <errno.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,9 +48,47 @@ static int test_log_prefix_lexicographically_increases(void)
     return 0;
 }
 
+static int test_signal_safe_uint32_to_string(void)
+{
+    char buf[128];
+
+    memset(buf, 0, sizeof(buf));
+    EXPECT_INT_EQ(3, signal_safe_uint32_to_string(123, buf, sizeof(buf)));
+    EXPECT_STR_EQ("123", buf);
+    EXPECT_INT_EQ(1, signal_safe_uint32_to_string(0, buf, sizeof(buf)));
+    EXPECT_STR_EQ("0", buf);
+    EXPECT_INT_EQ(-ENAMETOOLONG, signal_safe_uint32_to_string(14, buf, 2));
+    EXPECT_INT_EQ(1, signal_safe_uint32_to_string(3, buf, 2));
+    EXPECT_STR_EQ("3", buf);
+
+    return 0;
+}
+
+static int test_emit_shutdown_message(void)
+{
+    FILE *fp;
+    char path[PATH_MAX], buf[4096];
+    char const *tmp = getenv("TMPDIR");
+
+    if (!tmp)
+        tmp = "/dev/shm";
+    snprintf(path, sizeof(path), "%s/log_path.%lld.%d", tmp, (long long)getpid(), rand());
+    fp = fopen(path, "w");
+    EXPECT_NONNULL(fp);
+    kibosh_log_init(fp, 0);
+    emit_shutdown_message(11);
+    memset(buf, 0, sizeof(buf));
+    EXPECT_INT_EQ(0, read_string_from_file(path, buf, sizeof(buf)));
+    EXPECT_STR_EQ("Shutting down with signal 11", buf);
+    fclose(fp);
+    return 0;
+}
+
 int main(void)
 {
     EXPECT_INT_ZERO(test_log_prefix_lexicographically_increases());
+    EXPECT_INT_ZERO(test_signal_safe_uint32_to_string());
+    EXPECT_INT_ZERO(test_emit_shutdown_message());
 
     return EXIT_SUCCESS;
 }

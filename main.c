@@ -19,6 +19,7 @@
 #include "fs.h"
 #include "log.h"
 #include "meta.h"
+#include "signal.h"
 #include "util.h"
 
 #include <ctype.h>
@@ -126,10 +127,8 @@ int main(int argc, char *argv[])
      */
     umask(0);
 
-    /* Ignore SIGPIPE because it is annoying. */
-    if (signal(SIGPIPE, SIG_DFL) == SIG_ERR) {
-        INFO("kibosh_main: failed to set the disposition of EPIPE "
-                "to SIG_DFL (ignored.)\n"); 
+    if (install_signal_handlers()) {
+        INFO("kibosh_main: failed to install signal handlers.\n");
         goto done;
     }
 
@@ -215,6 +214,7 @@ static void *kibosh_init(struct fuse_conn_info *conn)
 
 static void kibosh_destroy(void *fs)
 {
+    INFO("Shutting down gracefully.\n");
     kibosh_fs_free(fs);
 }
 
