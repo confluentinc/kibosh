@@ -29,8 +29,11 @@
 
 struct fuse_opt kibosh_command_line_options[] = {
      KIBOSH_CONF_OPT("--pidfile=%s", pidfile_path, 0),
+     KIBOSH_CONF_OPT("--pidfile %s", pidfile_path, 0),
      KIBOSH_CONF_OPT("--log=%s", log_path, 0),
+     KIBOSH_CONF_OPT("--log %s", log_path, 0),
      KIBOSH_CONF_OPT("--target=%s", target_path, 0),
+     KIBOSH_CONF_OPT("--target %s", target_path, 0),
      KIBOSH_CONF_OPT("-v", verbose, 1),
      KIBOSH_CONF_OPT("--verbose", verbose, 1),
      FUSE_OPT_KEY("-h", KIBOSH_CLI_GENERAL_HELP_KEY),

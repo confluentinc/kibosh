@@ -16,8 +16,8 @@
 # limitations under the License.
 #
 
-UNDERFS=""
-OVERFS=""
+TARGET=""
+MIRROR=""
 KIBOSH_PID=""
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 TEST_RESULT=""
@@ -58,19 +58,19 @@ start_kibosh() {
     [[ -x "${KIBOSH_BIN}" ]] || die "failed to find kibosh binary at ${KIBOSH_BIN}."
 
     # Initialize constants
-    local NEW_UNDERFS="/dev/shm/underfs.$RANDOM.$RANDOM"
-    mkdir "${NEW_UNDERFS}" || die "failed to mkdir ${NEW_UNDERFS}"
-    UNDERFS="${NEW_UNDERFS}"
+    local NEW_TARGET="/dev/shm/underfs.$RANDOM.$RANDOM"
+    mkdir "${NEW_TARGET}" || die "failed to mkdir ${NEW_TARGET}"
+    TARGET="${NEW_TARGET}"
 
-    local NEW_OVERFS="/dev/shm/overfs.$RANDOM.$RANDOM"
-    mkdir "${NEW_OVERFS}" || die "failed to mkdir ${NEW_OVERFS}"
-    OVERFS="${NEW_OVERFS}"
+    local NEW_MIRROR="/dev/shm/overfs.$RANDOM.$RANDOM"
+    mkdir "${NEW_MIRROR}" || die "failed to mkdir ${NEW_MIRROR}"
+    MIRROR="${NEW_MIRROR}"
 
-    echo "*** ${KIBOSH_BIN}" -f "${OVERFS}" "${UNDERFS}"
-    "${KIBOSH_BIN}" -f "${OVERFS}" "${UNDERFS}" &
+    echo "*** ${KIBOSH_BIN}" --target ${TARGET} -f "${MIRROR}" 
+    "${KIBOSH_BIN}" --target ${TARGET} -f "${MIRROR}" &
     KIBOSH_PID=$!
 
-    CONTROL_FILE="${OVERFS}/kibosh_control"
+    CONTROL_FILE="${MIRROR}/kibosh_control"
     while [[ ! -f "${CONTROL_FILE}" ]]; do
         sleep 0.01
         [[ -d "/proc/${KIBOSH_PID}" ]] || die "kibosh proces exited."
@@ -81,7 +81,7 @@ simple_test() {
     TEST_RESULT="FAILURE"
     echo "*** RUNNING simple_test..."
     start_kibosh
-    touch "${OVERFS}/hi"
+    touch "${MIRROR}/hi"
     TEST_RESULT="SUCCESS"
 }
 
@@ -91,7 +91,7 @@ fs_test() {
     FS_TEST_BIN="${SCRIPT_DIR}/fs_test"
     [[ -x "${FS_TEST_BIN}" ]] || die "failed to find fs_test binary at ${FS_TEST_BIN}"
     start_kibosh
-    do_or_die "${FS_TEST_BIN}" "${OVERFS}"
+    do_or_die "${FS_TEST_BIN}" "${MIRROR}"
     TEST_RESULT="SUCCESS"
 }
 
@@ -113,15 +113,15 @@ cleanup() {
         kill -- "${KIBOSH_PID}"
         wait
     fi
-    if [[ "${UNDERFS}" != "" ]]; then
-        echo "*** rm -rf -- ${UNDERFS}"
-        rm -rf -- "${UNDERFS}"
+    if [[ "${TARGET}" != "" ]]; then
+        echo "*** rm -rf -- ${TARGET}"
+        rm -rf -- "${TARGET}"
     fi
-    if [[ "${OVERFS}" != "" ]]; then
-        echo "*** fusermount -u -- ${OVERFS}"
-        fusermount -u -- "${OVERFS}"
-        echo "*** rm -rf -- ${OVERFS}"
-        rm -rf -- "${OVERFS}"
+    if [[ "${MIRROR}" != "" ]]; then
+        echo "*** fusermount -u -- ${MIRROR}"
+        fusermount -u -- "${MIRROR}"
+        echo "*** rm -rf -- ${MIRROR}"
+        rm -rf -- "${MIRROR}"
     fi
     if [[ "${TEST_RESULT}" != "" ]]; then
         echo "*** ${TEST_RESULT}"
