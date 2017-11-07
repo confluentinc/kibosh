@@ -86,7 +86,7 @@ int expect_str_equal(const char *a, const char *b);
 
 #define EXPECT_NULL(x) \
     do { \
-        void *__my_ret__ = x; \
+        const void *__my_ret__ = x; \
         if (__my_ret__) { \
             fprintf(stderr, "expected NULL, got %p on line %d: %s\n",\
                 __my_ret__, __LINE__, #x); \
@@ -96,7 +96,7 @@ int expect_str_equal(const char *a, const char *b);
 
 #define EXPECT_NONNULL(x) \
     do { \
-        void *__my_ret__ = x; \
+        const void *__my_ret__ = x; \
         if (!__my_ret__) { \
             fprintf(stderr, "expected non-NULL, got NULL on line %d: %s\n",\
                 __LINE__, #x); \
