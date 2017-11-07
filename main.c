@@ -111,6 +111,17 @@ int main(int argc, char *argv[])
     FILE *log_file = NULL;
     char *conf_str = NULL;
 
+    /*
+     * If the stdout and stderr of Kibosh are being redirected to a file, they will be fully
+     * buffered by default.  Here, we switch them to be line-buffered instead, so that we can see
+     * any messages as they occur.  In general, we prefer to send messages to the configured log
+     * file, but it is sometimes necessary for them to go to stdout or stderr.  One reason is that
+     * FUSE writes some error messages to the standard streams.  Another reason is because if we
+     * can't open our desired logfile, we need to log the failure message somewhere.
+     */
+    setvbuf(stdout, NULL, _IOLBF, 8192);
+    setvbuf(stderr, NULL, _IOLBF, 8192);
+
     INFO("kibosh_main: starting Kibosh.\n");
     conf = kibosh_conf_alloc();
     if (!conf) {
