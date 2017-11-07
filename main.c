@@ -164,6 +164,12 @@ int main(int argc, char *argv[])
     }
     INFO("kibosh_main: configured %s.\n", conf_str);
 
+    /*
+     * Change the current working directory to be the filesystem root.  We do this so that we don't
+     * hold on to a reference to the current working directory while running our daemon.  All
+     * configured relative paths should have been translated into absolute paths by
+     * kibosh_conf_reify prior to this point.
+     */
     if (chdir("/") < 0) {
         int err = errno;
         INFO("kibosh_main: failed to change directory to /: error %d (%s)\n",
@@ -198,6 +204,10 @@ int main(int argc, char *argv[])
                     (conf->verbose ? KIBOSH_LOG_ALL_ENABLED : KIBOSH_LOG_INFO_ENABLED));
 
     if (conf->log_path) {
+        /*
+         * If a logfile is configured, repeat the earlier log message that describes our
+         * configuration.
+         */
         INFO("kibosh_main: configured %s.\n", conf_str);
     }
 
