@@ -111,6 +111,15 @@ add_executable(fs_test
 )
 target_link_libraries(fs_test utest)
 
+add_executable(log_unit
+    log_unit.c
+    log.c
+    test.c
+    util.c
+)
+target_link_libraries(log_unit utest m)
+add_utest(log_unit)
+
 add_executable(pid_unit
     io.c
     log.c

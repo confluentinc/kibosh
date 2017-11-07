@@ -47,6 +47,7 @@ extern uint32_t global_kibosh_log_settings;
  */
 #define DEBUG_HELPER(fmt, ...) \
     if (global_kibosh_log_settings & KIBOSH_LOG_DEBUG_ENABLED) { \
+        fputs(log_prefix(), GET_KIBOSH_LOG_FILE); \
         fprintf(GET_KIBOSH_LOG_FILE, fmt "%s", __VA_ARGS__); \
     }
 #define DEBUG(...) DEBUG_HELPER(__VA_ARGS__, "")
@@ -56,6 +57,7 @@ extern uint32_t global_kibosh_log_settings;
  */
 #define INFO_HELPER(fmt, ...) \
     if (global_kibosh_log_settings & KIBOSH_LOG_INFO_ENABLED) { \
+        fputs(log_prefix(), GET_KIBOSH_LOG_FILE); \
         fprintf(GET_KIBOSH_LOG_FILE, fmt "%s", __VA_ARGS__); \
     }
 #define INFO(...) INFO_HELPER(__VA_ARGS__, "")
@@ -66,6 +68,13 @@ extern uint32_t global_kibosh_log_settings;
  * This function must be called before any threads are started.
  */
 void kibosh_log_init(FILE *log_file, uint32_t settings);
+
+/**
+ * Return a prefix that should be used for log lines.
+ *
+ * @return              The log line prefix.  This will be stored in a thread-local variable.
+ */
+const char* log_prefix(void);
 
 /**
  * A thread-safe strerror alternative.

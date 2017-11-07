@@ -23,9 +23,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
+#define LOG_PREFIX_BUFFER_SIZE 64
+__thread char log_prefix_buffer[LOG_PREFIX_BUFFER_SIZE];
 
 #define STRERROR_BUFFER_SIZE 128
-
 __thread char strerror_buffer[STRERROR_BUFFER_SIZE];
 
 FILE *global_kibosh_log_file = NULL;
@@ -36,6 +39,31 @@ void kibosh_log_init(FILE *log_file, uint32_t settings)
 {
     global_kibosh_log_file = log_file;
     global_kibosh_log_settings = settings;
+}
+
+const char* log_prefix(void)
+{
+    int ret;
+    struct timespec ts;
+    time_t time;
+    struct tm tm;
+
+    if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
+        snprintf(log_prefix_buffer, LOG_PREFIX_BUFFER_SIZE, "(clock_gettime failed) ");
+        return log_prefix_buffer;
+    }
+    time = ts.tv_sec;
+    if (!localtime_r(&time, &tm)) {
+        snprintf(log_prefix_buffer, LOG_PREFIX_BUFFER_SIZE, "(localtime_r failed) ");
+        return log_prefix_buffer;
+    }
+    ret = strftime(log_prefix_buffer, LOG_PREFIX_BUFFER_SIZE, "%Y-%m-%d %H:%M:%S,", &tm);
+    if (ret <= 0) {
+        snprintf(log_prefix_buffer, LOG_PREFIX_BUFFER_SIZE, "(strftime failed) ");
+        return log_prefix_buffer;
+    }
+    snprintf(log_prefix_buffer + ret, LOG_PREFIX_BUFFER_SIZE - ret, "%09ld ", ts.tv_nsec);
+    return log_prefix_buffer;
 }
 
 const char* safe_strerror(int errnum)
