@@ -226,7 +226,7 @@ int faults_parse(const char *str, struct kibosh_faults **out)
     faults = get_child(root, "faults");
     if (!faults) {
         INFO("faults_parse: failed to parse input string: there was no \"faults\" array "
-             "in the root object.");
+             "in the root object.\n");
         goto done;
     }
     ret = fault_array_parse(faults, out);

@@ -243,13 +243,13 @@ int kibosh_fs_accessor_fd_release(struct kibosh_fs *fs, int fd)
     }
     ret = faults_parse(fs->control_buf, &faults);
     if (ret < 0) {
-        INFO("kibosh_fs_accessor_fd_release: faults_parse failed: error %d (%s)\n",
-                -ret, safe_strerror(-ret));
+        INFO("kibosh_fs_accessor_fd_release: failed to parse '%s': error %d (%s)\n",
+                fs->control_buf, -ret, safe_strerror(-ret));
         goto done_release_lock;
     }
     fs->faults = faults;
     swap_ints(&fd, &fs->control_fd);
-    INFO("kibosh_fs_accessor_fd_release: refreshed faults: %s\n", fs->control_buf);
+    INFO("kibosh_fs_accessor_fd_release: successfully parsed '%s'\n", fs->control_buf);
     ret = 0;
 done_release_lock:
     pthread_mutex_unlock(&fs->lock);
