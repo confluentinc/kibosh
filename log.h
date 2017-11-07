@@ -36,7 +36,10 @@ extern FILE *global_kibosh_log_file;
 
 // The global log settings.
 #define KIBOSH_LOG_DEBUG_ENABLED 0x1
-#define KIBOSH_LOG_ALL_ENABLED KIBOSH_LOG_DEBUG_ENABLED
+#define KIBOSH_LOG_INFO_ENABLED 0x2
+#define KIBOSH_LOG_ALL_ENABLED \
+    (KIBOSH_LOG_DEBUG_ENABLED | \
+     KIBOSH_LOG_INFO_ENABLED)
 extern uint32_t global_kibosh_log_settings;
 
 /**
@@ -52,9 +55,9 @@ extern uint32_t global_kibosh_log_settings;
  * Print an info message.
  */
 #define INFO_HELPER(fmt, ...) \
-    do { \
+    if (global_kibosh_log_settings & KIBOSH_LOG_INFO_ENABLED) { \
         fprintf(GET_KIBOSH_LOG_FILE, fmt "%s", __VA_ARGS__); \
-    } while (0);
+    }
 #define INFO(...) INFO_HELPER(__VA_ARGS__, "")
 
 /**

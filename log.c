@@ -30,7 +30,7 @@ __thread char strerror_buffer[STRERROR_BUFFER_SIZE];
 
 FILE *global_kibosh_log_file = NULL;
 
-uint32_t global_kibosh_log_settings = KIBOSH_LOG_DEBUG_ENABLED;
+uint32_t global_kibosh_log_settings = KIBOSH_LOG_ALL_ENABLED;
 
 void kibosh_log_init(FILE *log_file, uint32_t settings)
 {

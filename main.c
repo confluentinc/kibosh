@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
     }
 
     kibosh_log_init((log_file ? log_file : stdout),
-                    (conf->verbose ? KIBOSH_LOG_ALL_ENABLED : 0));
+                    (conf->verbose ? KIBOSH_LOG_ALL_ENABLED : KIBOSH_LOG_INFO_ENABLED));
 
     if (conf->log_path) {
         INFO("kibosh_main: configured %s.\n", conf_str);
