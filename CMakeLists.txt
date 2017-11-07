@@ -81,6 +81,16 @@ add_library(utest
 )
 target_link_libraries(utest pthread)
 
+add_executable(conf_unit
+    conf.c
+    conf_unit.c
+    log.c
+    test.c
+    util.c
+)
+target_link_libraries(conf_unit utest m)
+add_utest(conf_unit)
+
 add_executable(fault_unit
     fault.c
     fault_unit.c

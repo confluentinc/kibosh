@@ -58,23 +58,16 @@ void kibosh_conf_free(struct kibosh_conf *conf)
     }
 }
 
-static int absolutize(const char *path, char **out)
+static int absolutize(char **path)
 {
     char *result = NULL, *cwd = NULL;
 
-    if (!path) {
+    if (!*path) {
         // The path is NULL.  Do not try to absolutize it.
-        *out = NULL;
         return 0;
     }
-    if (path[0] == '/') {
-        // The path is already absolute.  Copy it and return.
-        result = strdup(path);
-        if (!result) {
-            INFO("absolutize: strdup failed: OOM.\n");
-            return -ENOMEM;
-        }
-        *out = result;
+    if ((*path)[0] == '/') {
+        // The path is already absolute.  Return.
         return 0;
     }
     // Make the path absolute by prepending the current working directory.
@@ -86,39 +79,31 @@ static int absolutize(const char *path, char **out)
              -err, safe_strerror(-err));
         return err;
     }
-    result = dynprintf("%s/%s", cwd, path);
+    result = dynprintf("%s/%s", cwd, *path);
     free(cwd);
     if (!result) {
         INFO("absolutize: strdup failed: OOM.\n");
         return -ENOMEM;
     }
-    *out = result;
+    free(*path);
+    *path = result;
     return 0;
 }
 
 int kibosh_conf_reify(struct kibosh_conf *conf)
 {
-    int ret = absolutize(conf->pidfile_path, &conf->pidfile_path);
-    if (ret < 0) {
-        INFO("Unable to find realpath of pidfile: error %d (%s)\n",
-             -ret, safe_strerror(-ret));
+    int ret = absolutize(&conf->pidfile_path);
+    if (ret < 0)
         return ret;
-    }
-    ret = absolutize(conf->log_path, &conf->log_path);
-    if (ret < 0) {
-        INFO("Unable to find realpath of log file: error %d (%s)\n",
-             -ret, safe_strerror(-ret));
+    ret = absolutize(&conf->log_path);
+    if (ret < 0)
         return ret;
-    }
-    ret = absolutize(conf->target_path, &conf->target_path);
-    if (ret < 0) {
-        INFO("Unable to find realpath of target path: error %d (%s)\n",
-             -ret, safe_strerror(-ret));
+    ret = absolutize(&conf->target_path);
+    if (ret < 0)
         return ret;
-    }
     if (!conf->target_path) {
         INFO("You must supply a target path.  Type --help for help.\n");
-        return -1;
+        return -EINVAL;
     }
     return 0;
 }
