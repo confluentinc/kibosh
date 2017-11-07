@@ -106,7 +106,7 @@ int signal_safe_uint32_to_string(uint32_t val, char *buf, size_t buf_len)
     return i;
 }
 
-#define SHUTDOWN_MSG "Shutting down with signal "
+#define SHUTDOWN_MSG "kibosh was terminated by signal "
 #define SHUTDOWN_MSG_LEN (sizeof(SHUTDOWN_MSG) - 1)
 
 int emit_shutdown_message(int signal)

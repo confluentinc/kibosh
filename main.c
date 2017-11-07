@@ -127,6 +127,10 @@ int main(int argc, char *argv[])
      */
     umask(0);
 
+    /*
+     * Install some basic signal handlers.  We want fatal signals to be logged, so that we know
+     * what happened, and SIGPIPE to be ignored.
+     */
     if (install_signal_handlers()) {
         INFO("kibosh_main: failed to install signal handlers.\n");
         goto done;
@@ -214,7 +218,7 @@ static void *kibosh_init(struct fuse_conn_info *conn)
 
 static void kibosh_destroy(void *fs)
 {
-    INFO("Shutting down gracefully.\n");
+    INFO("kibosh shut down gracefully.\n");
     kibosh_fs_free(fs);
 }
 

@@ -79,7 +79,7 @@ static int test_emit_shutdown_message(void)
     emit_shutdown_message(11);
     memset(buf, 0, sizeof(buf));
     EXPECT_INT_EQ(0, read_string_from_file(path, buf, sizeof(buf)));
-    EXPECT_STR_EQ("Shutting down with signal 11", buf);
+    EXPECT_STR_EQ("kibosh was terminated by signal 11\n", buf);
     fclose(fp);
     return 0;
 }
