@@ -56,6 +56,7 @@ int kibosh_fs_alloc(struct kibosh_fs **out, const struct kibosh_conf *conf)
     int ret;
     struct kibosh_fs *fs;
     char *buf = NULL;
+    size_t buf_len;
 
     *out = NULL;
     fs = calloc(1, sizeof(*fs));
@@ -101,10 +102,17 @@ int kibosh_fs_alloc(struct kibosh_fs **out, const struct kibosh_conf *conf)
         kibosh_fs_free(fs);
         return ret;
     }
+    fs->cur_control_json = malloc(CONTROL_BUF_LEN);
+    if (!fs->cur_control_json) {
+        ret = -ENOMEM;
+        INFO("kibosh_fs_alloc: failed to allocate cur_control_json.\n");
+        kibosh_fs_free(fs);
+        return ret;
+    }
     fs->control_buf = malloc(CONTROL_BUF_LEN);
     if (!fs->control_buf) {
         ret = -ENOMEM;
-        INFO("kibosh_fs_alloc: failed to allocate control buffer.\n");
+        INFO("kibosh_fs_alloc: failed to allocate control_buf.\n");
         kibosh_fs_free(fs);
         return ret;
     }
@@ -116,7 +124,16 @@ int kibosh_fs_alloc(struct kibosh_fs **out, const struct kibosh_conf *conf)
         kibosh_fs_free(fs);
         return ret;
     }
-    ret = safe_write(fs->control_fd, buf, strlen(buf));
+    buf_len = strlen(buf);
+    if (buf_len >= CONTROL_BUF_LEN) {
+        ret = -ENAMETOOLONG;
+        INFO("kibosh_fs_alloc: faults_unparse: unparsed faults data was longer than "
+             "CONTROL_BUF_LEN (%zd versus %d)\n", buf_len, CONTROL_BUF_LEN);
+        kibosh_fs_free(fs);
+        return ret;
+    }
+    strncpy(fs->cur_control_json, buf, buf_len + 1);
+    ret = safe_write(fs->control_fd, buf, buf_len);
     free(buf);
     if (ret < 0) {
         INFO("kibosh_fs_alloc: failed to write initial JSON to control file: %s\n", safe_strerror(-ret));
@@ -147,6 +164,10 @@ void kibosh_fs_free(struct kibosh_fs *fs)
     if (fs->faults) {
         faults_free(fs->faults);
         fs->faults = NULL;
+    }
+    if (fs->cur_control_json) {
+        free(fs->cur_control_json);
+        fs->cur_control_json = NULL;
     }
     if (fs->control_buf) {
         free(fs->control_buf);
@@ -220,11 +241,12 @@ static void swap_ints(int *a, int *b)
 
 int kibosh_fs_accessor_fd_release(struct kibosh_fs *fs, int fd)
 {
-    int flags, ret = 0;
+    int flags, ret;
     struct kibosh_faults *faults = NULL;
 
     flags = fcntl(fd, F_GETFL, 0);
     if ((flags & O_ACCMODE) == O_RDONLY) {
+        ret = 0;
         DEBUG("kibosh_fs_accessor_fd_release: closing read-only accessor.\n");
         goto done_close_fd;
     }
@@ -241,12 +263,18 @@ int kibosh_fs_accessor_fd_release(struct kibosh_fs *fs, int fd)
              "error %d (%s)\n", -ret, safe_strerror(-ret));
         goto done_release_lock;
     }
+    if (strcmp(fs->cur_control_json, fs->control_buf) == 0) {
+        ret = 0;
+        DEBUG("kibosh_fs_accessor_fd_release: control_buf was unchanged.\n");
+        goto done_release_lock;
+    }
     ret = faults_parse(fs->control_buf, &faults);
     if (ret < 0) {
         INFO("kibosh_fs_accessor_fd_release: failed to parse '%s': error %d (%s)\n",
                 fs->control_buf, -ret, safe_strerror(-ret));
         goto done_release_lock;
     }
+    strncpy(fs->cur_control_json, fs->control_buf, CONTROL_BUF_LEN);
     fs->faults = faults;
     swap_ints(&fd, &fs->control_fd);
     INFO("kibosh_fs_accessor_fd_release: successfully parsed '%s'\n", fs->control_buf);

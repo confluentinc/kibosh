@@ -47,6 +47,11 @@ struct kibosh_fs {
     struct kibosh_faults *faults;
 
     /**
+     * The current control JSON.
+     */
+    char *cur_control_json;
+
+    /**
      * The buffer used to read the control fd.
      */
     char *control_buf;
