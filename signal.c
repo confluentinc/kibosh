@@ -58,7 +58,7 @@ int install_signal_handlers(void)
         if (sigaction(signum, &sa, NULL) == -1) {
             int err = -errno;
             INFO("install_signal_handlers: failed to install handler for "
-                "signal %s: %d (%s)", strsignal(signum), -err, safe_strerror(-err));
+                "signal %s: %d (%s)\n", strsignal(signum), -err, safe_strerror(-err));
             return err;
         }
     }

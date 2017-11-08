@@ -36,6 +36,7 @@ int write_pidfile(const char *path)
              path, safe_strerror(-ret), -ret);
         return ret;
     }
+    DEBUG("write_pidfile(%s): wrote pid %s.\n", path, str);
     return 0;
 }
 
@@ -47,6 +48,7 @@ int remove_pidfile(const char *path)
              path, safe_strerror(-ret), -ret);
         return ret;
     }
+    DEBUG("remove_pidfile(%s): removed pidfile\n", path);
     return 0;
 }
 

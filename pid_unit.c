@@ -41,6 +41,7 @@ static int test_write_pidfile(void)
 
 int main(void)
 {
+    kibosh_log_init(stdout, 0);
     EXPECT_INT_ZERO(test_write_pidfile());
 
     return EXIT_SUCCESS;

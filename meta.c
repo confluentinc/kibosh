@@ -300,10 +300,8 @@ int kibosh_readdir(const char *path UNUSED, void *buf,
             break;
         }
     }
-#ifdef DEBUG_ENABLED
-    {
+    if (global_kibosh_log_settings & KIBOSH_LOG_DEBUG_ENABLED) {
         const char *exit_reason;
-
         if (ret < 0) {
             exit_reason = safe_strerror(-ret);
         } else if (ret == 1) {
@@ -314,7 +312,6 @@ int kibosh_readdir(const char *path UNUSED, void *buf,
         DEBUG("kibosh_readdir(dir->path=%s, offset=%"PRId64"): %s\n",
               dir->path, (int64_t)offset, exit_reason);
     }
-#endif
     if (ret < 0)
         return -ret;
     else
@@ -423,16 +420,16 @@ int kibosh_setxattr(const char *path, const char *name, const char *value,
     if (setxattr(bpath, name, value, size, flags) < 0) {
         ret = -errno;
     }
-#ifdef DEBUG_ENABLED
-    nvalue = alloc_zterm_xattr(value, size);
-    if (!nvalue) {
-        ret = -ENOMEM;
-        goto done;
+    if (global_kibosh_log_settings & KIBOSH_LOG_DEBUG_ENABLED) {
+        nvalue = alloc_zterm_xattr(value, size);
+        if (!nvalue) {
+            ret = -ENOMEM;
+            goto done;
+        }
+        DEBUG("kibosh_setxattr(path=%s, bpath=%s, value=%s) = %d (%s)\n",
+              path, bpath, nvalue, -ret, safe_strerror(-ret));
     }
-    DEBUG("kibosh_setxattr(path=%s, bpath=%s, value=%s) = %d (%s)\n",
-          path, bpath, nvalue, -ret, safe_strerror(-ret));
 done:
-#endif
     free(nvalue);
     return AS_FUSE_ERR(ret);
 }

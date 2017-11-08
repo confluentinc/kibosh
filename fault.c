@@ -40,23 +40,23 @@ static struct kibosh_fault_unreadable *kibosh_fault_unreadable_parse(json_value 
 
     code_obj = get_child(obj, "code");
     if ((!code_obj) || (code_obj->type != json_integer)) {
-        INFO("kibosh_fault_unreadable_parse: No \"code\" field found in fault object.");
+        INFO("kibosh_fault_unreadable_parse: No \"code\" field found in fault object.\n");
         goto error;
     }
     prefix_obj = get_child(obj, "prefix");
     if ((!prefix_obj) || (prefix_obj->type != json_string)) {
-        INFO("kibosh_fault_unreadable_parse: No \"prefix\" field found in fault object.");
+        INFO("kibosh_fault_unreadable_parse: No \"prefix\" field found in fault object.\n");
         goto error;
     }
     fault = calloc(1, sizeof(*fault));
     if (!fault) {
-        INFO("kibosh_fault_unreadable_parse: OOM");
+        INFO("kibosh_fault_unreadable_parse: OOM\n");
         return NULL;
     }
     snprintf(fault->base.type, KIBOSH_FAULT_TYPE_STR_LEN, "%s", KIBOSH_FAULT_TYPE_UNREADABLE);
     fault->prefix = strdup(prefix_obj->u.string.ptr);
     if (!fault->prefix) {
-        INFO("kibosh_fault_unreadable_parse: OOM");
+        INFO("kibosh_fault_unreadable_parse: OOM\n");
         goto error;
     }
     fault->code = code_obj->u.integer;
@@ -107,11 +107,11 @@ struct kibosh_fault_base *kibosh_fault_base_parse(json_value *obj)
 
     child = get_child(obj, "type");
     if (!child) {
-        INFO("kibosh_fault_base: No \"type\" field found in root object.");
+        INFO("kibosh_fault_base: No \"type\" field found in root object.\n");
         return NULL;
     }
     if (child->type != json_string) {
-        INFO("kibosh_fault_base: \"type\" field was not a string.");
+        INFO("kibosh_fault_base: \"type\" field was not a string.\n");
         return NULL;
     }
     if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_UNREADABLE) == 0) {
@@ -170,14 +170,14 @@ static int fault_array_parse(json_value *arr, struct kibosh_faults **out)
     int ret = -EIO, i, num_faults = 0;
 
     if (arr->type != json_array) {
-        INFO("fault_array_parse: \"faults\" was not an array.");
+        INFO("fault_array_parse: \"faults\" was not an array.\n");
         goto done;
     }
     num_faults = arr->u.array.length;
 
     faults = calloc(1, sizeof(*faults));
     if (!faults) {
-        INFO("fault_array_parse: out of memory when trying to allocate faults structure.");
+        INFO("fault_array_parse: out of memory when trying to allocate faults structure.\n");
         goto done;
     }
     faults->list = calloc(num_faults + 1, sizeof(struct kibosh_fault_base *));
