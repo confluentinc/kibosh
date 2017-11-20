@@ -23,6 +23,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DFUSE_USE_VERSION=26")
 
 enable_testing()
+INCLUDE(CheckCSourceCompiles)
 
 # Define "make check" as an alias for "make test."
 add_custom_target(check COMMAND ctest)
@@ -45,6 +46,13 @@ IF(FUSE_FOUND)
 ELSE(FUSE_FOUND)
     MESSAGE(FATAL_ERROR "Failed to find Linux FUSE libraries or include files.")
 ENDIF(FUSE_FOUND)
+
+CHECK_C_SOURCE_COMPILES("#include <sys/syscall.h>
+int main(void) { return SYS_memfd_create; }" HAVE_MEMFD_CREATE)
+CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
+include_directories(
+    ${CMAKE_BINARY_DIR}
+)
 
 find_program(VALGRIND_BINARY valgrind)
 set(VALGRIND_OPTIONS --tool=memcheck --leak-check=full --trace-children=yes --error-exitcode=99)

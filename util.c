@@ -14,6 +14,7 @@
  * limitations under the License.
  **/
 
+#include "config.h"
 #include "json.h"
 #include "log.h"
 #include "util.h"
@@ -28,6 +29,7 @@
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 int snappend(char *str, size_t str_len, const char *fmt, ...)
@@ -273,11 +275,31 @@ int recursive_unlink(const char *name)
 
 int memfd_create(const char *name)
 {
+#ifdef HAVE_MEMFD_CREATE
     int ret = syscall(SYS_memfd_create, name, 0);
     if (ret < 0) {
         return -errno;
     }
     return ret;
+#else
+    // If the kernel is too old to support memfd_create, fall back on creating
+    // a temporary file in /dev/shm, and then immediately unlinking it.
+    int fd;
+    char *path = dynprintf("/dev/shm/%s.temp.%lld.%ld.%ld.%ld",
+	name, (long long) time(NULL), (long)random(), (long)random(), (long)random());
+    if (!path) {
+        return -ENOMEM;
+    }
+    fd = open(path, O_CREAT | O_EXCL | O_RDWR, 0600);
+    if (fd < 0) {
+        int ret = -errno;
+        free(path);
+        return ret;
+    }
+    unlink(path);
+    free(path);
+    return fd;
+#endif
 }
 
 // vim: ts=4:sw=4:tw=99:et
