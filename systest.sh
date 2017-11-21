@@ -46,9 +46,9 @@ die() {
     exit 1
 }
 
-do_or_die() {
+bg_do() {
     echo "${@}"
-    "${@}" || die "failed."
+    "${@}" &
 }
 
 start_kibosh() {
@@ -66,8 +66,7 @@ start_kibosh() {
     mkdir "${NEW_MIRROR}" || die "failed to mkdir ${NEW_MIRROR}"
     MIRROR="${NEW_MIRROR}"
 
-    echo "*** ${KIBOSH_BIN}" --target ${TARGET} -f "${MIRROR}" 
-    "${KIBOSH_BIN}" --target ${TARGET} -f "${MIRROR}" &
+    bg_do "${KIBOSH_BIN}" --control-mode 666 --target ${TARGET} -f "${MIRROR}"
     KIBOSH_PID=$!
 
     CONTROL_FILE="${MIRROR}/kibosh_control"

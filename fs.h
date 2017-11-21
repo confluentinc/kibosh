@@ -42,6 +42,11 @@ struct kibosh_fs {
     int control_fd;
 
     /**
+     * The mode to use on the control file.
+     */
+    int control_mode;
+
+    /**
      * The current set of faults.  Protected by the lock.
      */
     struct kibosh_faults *faults;

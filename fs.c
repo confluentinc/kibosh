@@ -88,13 +88,14 @@ int kibosh_fs_alloc(struct kibosh_fs **out, const struct kibosh_conf *conf)
             return ret;
         }
     }
-    fs->control_fd = memfd_create(KIBOSH_CONTROL);
+    fs->control_fd = memfd_create(KIBOSH_CONTROL, conf->control_mode);
     if (fs->control_fd < 0) {
         ret = fs->control_fd;
         INFO("kibosh_fs_alloc: memfd_create failed: %s\n", safe_strerror(-ret));
         kibosh_fs_free(fs);
         return ret;
     }
+    fs->control_mode = conf->control_mode;
     ret = faults_calloc(&fs->faults);
     if (ret < 0) {
         INFO("kibosh_fs_alloc: faults_calloc failed: error %d (%s)\n",
@@ -181,7 +182,7 @@ int kibosh_fs_accessor_fd_alloc(struct kibosh_fs *fs, int populate)
 {
     int new_fd = -1, ret;
 
-    new_fd = memfd_create(KIBOSH_CONTROL);
+    new_fd = memfd_create(KIBOSH_CONTROL, fs->control_mode);
     if (new_fd < 0) {
         ret = new_fd;
         INFO("kibosh_fs_accessor_fd_alloc: memfd_create failed: error %d (%s)\n",

@@ -34,6 +34,8 @@ struct fuse_opt kibosh_command_line_options[] = {
      KIBOSH_CONF_OPT("--log %s", log_path, 0),
      KIBOSH_CONF_OPT("--target=%s", target_path, 0),
      KIBOSH_CONF_OPT("--target %s", target_path, 0),
+     KIBOSH_CONF_OPT("--control-mode=%o", control_mode, 0600),
+     KIBOSH_CONF_OPT("--control-mode %o", control_mode, 0600),
      KIBOSH_CONF_OPT("-v", verbose, 1),
      KIBOSH_CONF_OPT("--verbose", verbose, 1),
      FUSE_OPT_KEY("-h", KIBOSH_CLI_GENERAL_HELP_KEY),
@@ -119,11 +121,13 @@ char *kibosh_conf_to_str(const struct kibosh_conf *conf)
         "pidfile_path=%s%s%s, "
         "log_path=%s%s%s, "
         "target_path=%s%s%s, "
+        "control_mode=0%03o, "
         "verbose=%d"
         "}",
         STR_PARAMS(conf->pidfile_path),
         STR_PARAMS(conf->log_path),
         STR_PARAMS(conf->target_path),
+        conf->control_mode,
         conf->verbose);
 }
 

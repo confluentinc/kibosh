@@ -273,14 +273,19 @@ int recursive_unlink(const char *name)
     return recursive_unlink_helper(AT_FDCWD, name);
 }
 
-int memfd_create(const char *name)
+int memfd_create(const char *name, int mode)
 {
 #ifdef HAVE_MEMFD_CREATE
-    int ret = syscall(SYS_memfd_create, name, 0);
-    if (ret < 0) {
+    int fd = syscall(SYS_memfd_create, name, 0);
+    if (fd < 0) {
         return -errno;
     }
-    return ret;
+    if (fchmod(fd, mode) < 0) {
+        int ret = -errno;
+        close(fd);
+        return ret;
+    }
+    return fd;
 #else
     // If the kernel is too old to support memfd_create, fall back on creating
     // a temporary file in /dev/shm, and then immediately unlinking it.
@@ -290,7 +295,7 @@ int memfd_create(const char *name)
     if (!path) {
         return -ENOMEM;
     }
-    fd = open(path, O_CREAT | O_EXCL | O_RDWR, 0600);
+    fd = open(path, O_CREAT | O_EXCL | O_RDWR, mode);
     if (fd < 0) {
         int ret = -errno;
         free(path);

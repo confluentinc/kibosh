@@ -40,6 +40,11 @@ struct kibosh_conf {
      * Zero to suppress DEBUG logs, nonzero to enable them.
      */
     int verbose;
+
+    /**
+     * Mode to use on the control file.
+     */
+    int control_mode;
 };
 
 enum kibosh_option_ty {

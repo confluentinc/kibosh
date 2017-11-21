@@ -92,10 +92,11 @@ int recursive_unlink(const char *name);
  * from the filesystem namespace.
  *
  * @param name          The name to use for debugging purposes.
+ * @param mode          The mode to use on the new fd.
  *
  * @return              A negative error code on failure; the file descriptor otherwise.
  */
-int memfd_create(const char *name);
+int memfd_create(const char *name, int mode);
 
 #ifdef __GNUC__
 #define UNUSED __attribute__((__unused__))
