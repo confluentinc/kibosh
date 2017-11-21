@@ -49,7 +49,7 @@ ENDIF(FUSE_FOUND)
 
 CHECK_C_SOURCE_COMPILES("#include <sys/syscall.h>
 int main(void) { return SYS_memfd_create; }" HAVE_MEMFD_CREATE)
-CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
+CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/local.h.cmake ${CMAKE_BINARY_DIR}/local.h)
 include_directories(
     ${CMAKE_BINARY_DIR}
 )

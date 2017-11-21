@@ -14,8 +14,8 @@
  * limitations under the License.
  **/
 
-#include "config.h"
 #include "json.h"
+#include "local.h"
 #include "log.h"
 #include "util.h"
 
