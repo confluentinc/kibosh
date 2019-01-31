@@ -31,7 +31,7 @@ To run the tests for Kibosh, type:
 To run Kibosh, you supply the mount point as the first argument, and the
 directory which you would like to mirror as the second argument.
 
-    $ ./kibosh /kibosh_mnt /mnt
+    $ ./kibosh /kibosh_mnt --target /mnt
 
 For more usage information, try:
 
@@ -46,7 +46,7 @@ control the filesystem behavior.
 Example:
 
     # Mount the filesystem.
-    $ ./kibosh /kibosh_mnt /mnt
+    $ ./kibosh /kibosh_mnt --target /mnt
 
     # Verify that there are no faults set
     $ cat /kibosh_mnt/kibosh_control
