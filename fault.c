@@ -225,13 +225,22 @@ int faults_parse(const char *str, struct kibosh_faults **out)
     }
     faults = get_child(root, "faults");
     if (!faults) {
-        INFO("faults_parse: failed to parse input string: there was no \"faults\" array "
-             "in the root object.\n");
-        goto done;
+        *out = calloc(1, sizeof(*faults));
+        if (!*out) {
+            ret = -ENOMEM;
+            goto done;
+        }
+        (*out)->list = calloc(1, sizeof(struct kibosh_fault_base*));
+        if (!(*out)->list) {
+            ret = -ENOMEM;
+            free(*out);
+            goto done;
+        }
+    } else {
+        ret = fault_array_parse(faults, out);
+        if (ret)
+            goto done;
     }
-    ret = fault_array_parse(faults, out);
-    if (ret)
-        goto done;
     ret = 0;
 done:
     if (root) {

@@ -128,11 +128,24 @@ static int test_fault_parse(void)
     return 0;
 }
 
+static int test_faults_parse_empty(void)
+{
+    struct kibosh_faults *faults = NULL;
+    EXPECT_INT_ZERO(faults_parse("{}", &faults));
+    EXPECT_NULL(faults->list[0]);
+    faults_free(faults);
+    EXPECT_INT_ZERO(faults_parse("{\"faults\":[]}", &faults));
+    EXPECT_NULL(faults->list[0]);
+    faults_free(faults);
+    return 0;
+}
+
 int main(void)
 {
     EXPECT_INT_ZERO(test_fault_unparse());
     EXPECT_INT_ZERO(test_faults_unparse());
     EXPECT_INT_ZERO(test_fault_parse());
+    EXPECT_INT_ZERO(test_faults_parse_empty());
 
     return EXIT_SUCCESS;
 }
