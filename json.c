@@ -723,6 +723,7 @@ json_value * json_parse_ex (json_settings * settings,
                         flags &= ~ flag_need_comma;
                         break;
                      }
+                     FALLTHROUGH;
 
                   default:
                      sprintf (error, "%d:%d: Unexpected `%c` in object", line_and_col, b);

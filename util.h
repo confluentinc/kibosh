@@ -104,6 +104,12 @@ int memfd_create(const char *name, int mode);
 #define UNUSED
 #endif
 
+#ifdef __GNUC__
+#define FALLTHROUGH __attribute__((fallthrough))
+#else
+#define FALLTHROUGH
+#endif
+
 /**
  * Convert a potentially negative error code into a FUSE-style positive error code.
  */
