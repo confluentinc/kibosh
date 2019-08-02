@@ -70,7 +70,7 @@ static int test_create_and_remove_subdir(const char *base)
 
 static int test_create_and_remove_nested(const char *base)
 {
-    char nest[PATH_MAX], nest2[PATH_MAX], nest3[PATH_MAX];
+    char nest[PATH_MAX], nest2[PATH_MAX + 50], nest3[PATH_MAX + 100];
 
     snprintf(nest, sizeof(nest), "%s/nest", base);
     EXPECT_POSIX_FAIL(access(nest, F_OK), ENOENT);
@@ -117,7 +117,7 @@ static int test_create_and_read_file(const char *base, int read_fault)
     unsigned int i;
     int fd;
     char test_string[16384], test_string2[16384];
-    char nest4[PATH_MAX], test_path[PATH_MAX], test_path2[PATH_MAX];
+    char nest4[PATH_MAX], test_path[PATH_MAX + 50], test_path2[PATH_MAX];
 
     snprintf(nest4, sizeof(nest4), "%s/nest4", base);
     EXPECT_POSIX_FAIL(access(nest4, F_OK), ENOENT);
