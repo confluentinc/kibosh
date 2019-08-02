@@ -38,7 +38,7 @@
 static struct fuse_operations kibosh_oper;
 
 // FUSE options which we always set.
-static const char const *MANDATORY_FUSE_OPTIONS[] = {
+static const char * const MANDATORY_FUSE_OPTIONS[] = {
     "-oallow_other", // Allow all users to access the mount point.
     "-odefault_permissions", // tell FUSE to do permission checking for us based on the reported permissions
     "-odirect_io", // Don't cache data in FUSE.
