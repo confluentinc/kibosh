@@ -71,6 +71,7 @@ add_executable(kibosh
     pid.c
     signal.c
     test.c
+    time.c
     util.c
 )
 target_link_libraries(kibosh
@@ -110,6 +111,7 @@ add_executable(fault_unit
     json.c
     log.c
     test.c
+    time.c
     util.c
 )
 target_link_libraries(fault_unit utest m)
@@ -120,6 +122,7 @@ add_executable(fs_test
     io.c
     log.c
     test.c
+    time.c
     util.c
 )
 target_link_libraries(fs_test utest)
@@ -153,6 +156,14 @@ add_executable(util_unit
 )
 target_link_libraries(util_unit utest)
 add_utest(util_unit)
+
+add_executable(time_unit
+    time_unit.c
+    time.c
+    test.c
+)
+target_link_libraries(time_unit utest)
+add_utest(time_unit)
 
 add_custom_target(
     copy_test_script ALL

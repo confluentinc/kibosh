@@ -40,7 +40,12 @@ struct kibosh_fault_base {
 #define KIBOSH_FAULT_TYPE_UNREADABLE "unreadable"
 
 /**
- * Class for Kibosh faults that make files unreadable.
+ * The type of kibosh_fault_read_delay.
+ */
+#define KIBOSH_FAULT_TYPE_READ_DELAY "read_delay"
+
+/**
+ * The class for Kibosh faults that make files unreadable.
  */
 struct kibosh_fault_unreadable {
     /**
@@ -57,6 +62,31 @@ struct kibosh_fault_unreadable {
      * The error code to return from read faults.
      */
     int code;
+};
+
+/**
+ * The class for Kibosh faults that lead to delays when reading.
+ */
+struct kibosh_fault_read_delay {
+    /**
+     * The base class members.
+     */
+    struct kibosh_fault_base base;
+
+    /**
+     * The path prefix.
+     */
+    char *prefix;
+
+    /**
+     * The number of milliseconds to delay the read.
+     */
+    uint32_t delay_ms;
+
+    /**
+     * The fraction of reads that are delayed.
+     */
+    double fraction;
 };
 
 struct kibosh_faults {

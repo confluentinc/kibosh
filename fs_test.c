@@ -18,6 +18,7 @@
 #include "io.h"
 #include "log.h"
 #include "test.h"
+#include "time.h"
 #include "util.h"
 
 #include <errno.h>
@@ -95,8 +96,32 @@ static int create_read_fault(const char *base, const char *prefix, int code)
 
     snprintf(control_path, sizeof(control_path), "%s%s", base, KIBOSH_CONTROL_PATH);
     snprintf(json, sizeof(json),
-        "{\"faults\":[{\"type\":\"unreadable\", \"prefix\":\"%s\", \"code\":%d}]}",
-        prefix, code);
+        "{\"faults\":[{"
+        "\"type\":\"unreadable\", "
+        "\"prefix\":\"%s\", "
+        "\"code\":%d"
+        "}]}",
+        prefix,
+        code);
+    EXPECT_INT_ZERO(write_string_to_file(control_path, json));
+    return 0;
+}
+
+static int create_read_delay_fault(const char *base, const char *prefix, int delay_ms)
+{
+    char json[256];
+    char control_path[PATH_MAX];
+
+    snprintf(control_path, sizeof(control_path), "%s%s", base, KIBOSH_CONTROL_PATH);
+    snprintf(json, sizeof(json),
+        "{\"faults\":[{"
+        "\"type\":\"read_delay\", "
+        "\"prefix\":\"%s\", "
+        "\"delay_ms\":%d, "
+        "\"fraction\": 1.0"
+        "}]}",
+        prefix,
+        delay_ms);
     EXPECT_INT_ZERO(write_string_to_file(control_path, json));
     return 0;
 }
@@ -112,7 +137,7 @@ static int clear_faults(const char *base)
     return 0;
 }
 
-static int test_create_and_read_file(const char *base, int read_fault)
+static int test_create_and_read_file(const char *base, int read_fault, int delay_ms)
 {
     unsigned int i;
     int fd;
@@ -132,6 +157,9 @@ static int test_create_and_read_file(const char *base, int read_fault)
     snprintf(test_path2, sizeof(test_path2), "%s/test_file2", base);
     EXPECT_INT_ZERO(write_string_to_file(test_path2, test_string));
     if (read_fault) {
+        if (delay_ms > 0) {
+            return -ENOTSUP;
+        }
         EXPECT_INT_ZERO(create_read_fault(base, "/nest4", read_fault));
         fd = open(test_path, O_RDONLY, 0666);
         if (fd < 0) {
@@ -140,6 +168,25 @@ static int test_create_and_read_file(const char *base, int read_fault)
         EXPECT_INT_EQ(-read_fault, read_string_from_fd(fd, test_string2, sizeof(test_string2)));
         EXPECT_POSIX_SUCC(close(fd));
         EXPECT_INT_ZERO(clear_faults(base));
+    } else if (delay_ms > 0) {
+        struct timespec now;
+        uint64_t old_ms, new_ms;
+
+        EXPECT_INT_ZERO(create_read_delay_fault(base, "/nest4", delay_ms));
+        fd = open(test_path, O_RDONLY, 0666);
+        if (fd < 0) {
+            EXPECT_POSIX_SUCC(fd);
+        }
+        EXPECT_INT_ZERO(clock_gettime(CLOCK_MONOTONIC, &now));
+        old_ms = timespec_to_ms(&now);
+        EXPECT_INT_ZERO(read_string_from_file(test_path, test_string2, sizeof(test_string2)));
+        EXPECT_INT_ZERO(clock_gettime(CLOCK_MONOTONIC, &now));
+        new_ms = timespec_to_ms(&now);
+        EXPECT_POSIX_SUCC(close(fd));
+        EXPECT_INT_ZERO(clear_faults(base));
+        if (old_ms + delay_ms > new_ms) {
+            FAIL("invalid delay");
+        }
     } else {
         EXPECT_INT_ZERO(read_string_from_file(test_path, test_string2, sizeof(test_string2)));
         EXPECT_STR_EQ(test_string, test_string2);
@@ -167,9 +214,11 @@ int main(int argc, char **argv)
 
     EXPECT_INT_ZERO(test_create_and_remove_nested(base));
 
-    EXPECT_INT_ZERO(test_create_and_read_file(base, 0));
+    EXPECT_INT_ZERO(test_create_and_read_file(base, 0, 0));
 
-    EXPECT_INT_ZERO(test_create_and_read_file(base, EIO));
+    EXPECT_INT_ZERO(test_create_and_read_file(base, EIO, 0));
+
+    EXPECT_INT_ZERO(test_create_and_read_file(base, 0, 50));
 
     return EXIT_SUCCESS;
 }

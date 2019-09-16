@@ -207,6 +207,11 @@ int expect_str_equal(const char *a, const char *b);
         } \
     } while (0);
 
+#define FAIL(msg) \
+    do { \
+        fprintf(stderr, "unexpected error %s on line %d\n", msg, __LINE__); \
+        return -1; \
+    } while (0);
 #endif
 
 // vim: ts=4:sw=4:tw=99:et
