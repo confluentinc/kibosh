@@ -90,7 +90,7 @@ fs_test() {
     FS_TEST_BIN="${SCRIPT_DIR}/fs_test"
     [[ -x "${FS_TEST_BIN}" ]] || die "failed to find fs_test binary at ${FS_TEST_BIN}"
     start_kibosh
-    do_or_die "${FS_TEST_BIN}" "${MIRROR}"
+    "${FS_TEST_BIN}" "${MIRROR}" || die "${FS_TEST_BIN} failed"
     TEST_RESULT="SUCCESS"
 }
 
