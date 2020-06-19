@@ -41,7 +41,7 @@ static struct fuse_operations kibosh_oper;
 static const char * const MANDATORY_FUSE_OPTIONS[] = {
     "-oallow_other", // Allow all users to access the mount point.
     "-odefault_permissions", // tell FUSE to do permission checking for us based on the reported permissions
-    "-odirect_io", // Don't cache data in FUSE.
+    //"-odirect_io", // Don't cache data in FUSE.
     "-ohard_remove", // Do not translate unlink into renames to .fuse_hiddenXXX
     "-oatomic_o_trunc", // Pass O_TRUNC to open()
 };
