@@ -42,9 +42,6 @@ static const char * const MANDATORY_FUSE_OPTIONS[] = {
     "-oallow_other", // Allow all users to access the mount point.
     "-odefault_permissions", // tell FUSE to do permission checking for us based on the reported permissions
     "-ohard_remove", // Do not translate unlink into renames to .fuse_hiddenXXX
-    "-odirect_io",
-    "-oblkdev,",
-    "-ofsname=vda1",
     "-oatomic_o_trunc", // Pass O_TRUNC to open()
 };
 
