@@ -82,6 +82,15 @@ static int kibosh_open_normal_file_impl(const char *path, int flags,
     // Assume that FUSE has already taken care of the umask.
     snprintf(bpath, sizeof(bpath), "%s%s", fs->root, path);
     file->fd = open(bpath, flags, mode);
+
+    // If new file is created, change the owner to actual user
+    if ((flags & O_CREAT) == O_CREAT)  {
+        if (chown(bpath, fuse_get_context()->uid, fuse_get_context()->gid) < 0) {
+            ret = -errno;
+            goto error;
+        }
+    }
+
     if (file->fd < 0) {
         ret = -errno;
         goto error;
