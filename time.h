@@ -18,6 +18,7 @@
 #define KIBOSH_TIME_H
 
 #include <stdint.h> // for uint32_t
+#include <time.h>
 
 struct timespec;
 

@@ -19,6 +19,7 @@
 
 #include "json.h" // for json_value
 #include <unistd.h> // for size_t
+#include <math.h> // for round()
 
 /**
  * Like snprintf, but appends to a string that already exists.
