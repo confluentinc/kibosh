@@ -18,6 +18,7 @@
 #include "fs.h"
 #include "log.h"
 #include "util.h"
+#include "fault.h"
 
 #include <ctype.h>
 #include <dirent.h>
@@ -79,13 +80,24 @@ static int kibosh_open_normal_file_impl(const char *path, int flags,
         ret = -ENOMEM;
         goto error;
     }
+
     // Assume that FUSE has already taken care of the umask.
     snprintf(bpath, sizeof(bpath), "%s%s", fs->root, path);
     file->fd = open(bpath, flags, mode);
+
     if (file->fd < 0) {
         ret = -errno;
         goto error;
     }
+
+    // If new file is created, change the owner to actual user
+    if ((flags & O_CREAT) == O_CREAT)  {
+        if (fchown(file->fd, fuse_get_context()->uid, fuse_get_context()->gid) < 0) {
+            ret = -errno;
+            goto error;
+        }
+    }
+
     info->fh = (uintptr_t)(void*)file;
     return 0;
 
@@ -225,6 +237,78 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
     } else {
         if (file->type == KIBOSH_FILE_TYPE_NORMAL) {
             fault = kibosh_fs_check_read_fault(fs, file->path);
+
+            // inject read_corrupt fault
+            if (fault >= CORRUPT_ZERO) {
+                double fraction = 0.5;
+                char *file_type = NULL;
+                struct kibosh_fault_base **iter;
+                struct kibosh_fault_read_corrupt *corrupt_fault;
+                for (iter = fs->faults->list; *iter; iter++) {
+                    if (strcmp((*iter)->type, KIBOSH_FAULT_TYPE_READ_CORRUPT) == 0) {
+                        corrupt_fault = (struct kibosh_fault_read_corrupt*)(*iter);
+                        fraction = corrupt_fault->fraction;
+                        file_type = corrupt_fault->file_type;
+                    }
+                }
+
+                int pos = (int) ((1.0 - fraction) * size);
+                int buf_size = (int) size;
+
+                switch(fault) {
+                    case CORRUPT_RAND:
+                        for (int i=0; i < buf_size; i++) {
+                            if (RAND_FRAC <= fraction) {
+                                memset(buf+i, (int) round(RAND_FRAC * 255.0), 1);
+                            }
+                        }
+                        break;
+
+                    case CORRUPT_ZERO:
+                        for (int i=0; i < buf_size; i++) {
+                            if (RAND_FRAC <= fraction) {
+                                memset(buf+i, 0, 1);
+                            }
+                        }
+                        break;
+
+                    case CORRUPT_RAND_SEQ:
+                        for (; pos < buf_size; ++pos) {
+                            memset(buf+pos, (int) round(RAND_FRAC * 255.0), 1);
+                        }
+                        break;
+
+                    case CORRUPT_ZERO_SEQ:
+                        memset(buf+pos, 0, buf_size - pos);
+                        break;
+
+                    case CORRUPT_DROP:
+                        size = size - pos;
+                        break;
+
+                    // CORRUPT_ZERO
+                    default:
+                        memset(buf+pos, 0, buf_size - pos);
+                }
+
+                int s = (int) round(time(0)*RAND_FRAC);
+                srand(s);
+                DEBUG("kibosh_read(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
+                              "= {\"mode\"=%d, \"fraction\"=%g, \"file_type\"=%s, \"rand_seed\"=%d}\n", file->path, size, (int64_t)offset, uid,
+                              fault, fraction, file_type, s);
+                for (int i=0; i < ret; i++) {
+                    // we corrupt a fraction of bytes
+                    if (RAND_FRAC <= fraction) {
+                        int b = 0;
+                        if (fault == CORRUPT_RAND)
+                            b = (int) round(RAND_FRAC * 255.0);
+                        memset(buf+i, b, 1);
+                    }
+                }
+                return ret;
+            }
+
+            // inject unreadable fault
             if (fault) {
                 ret = -fault;
             }
@@ -265,12 +349,86 @@ int kibosh_release(const char *path UNUSED, struct fuse_file_info *info)
     return AS_FUSE_ERR(ret);
 }
 
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wdiscarded-qualifiers\"")
 int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t offset,
                  struct fuse_file_info *info)
 {
-    int ret;
+    int ret, fault;
     uint32_t uid UNUSED;
     struct kibosh_file *file = (struct kibosh_file*)(uintptr_t)info->fh;
+    struct kibosh_fs *fs = fuse_get_context()->private_data;
+
+    if (file->type == KIBOSH_FILE_TYPE_NORMAL) {
+        fault = kibosh_fs_check_write_fault(fs, file->path);
+
+        // need to inject write_corrupt
+        if (fault >= CORRUPT_ZERO) {
+            double fraction = 0.5;
+            char *file_type = NULL;
+            struct kibosh_fault_base **iter;
+            struct kibosh_fault_write_corrupt *corrupt_fault;
+            for (iter = fs->faults->list; *iter; iter++) {
+                if (strcmp((*iter)->type, KIBOSH_FAULT_TYPE_WRITE_CORRUPT) == 0) {
+                    corrupt_fault = (struct kibosh_fault_write_corrupt*)(*iter);
+                    fraction = corrupt_fault->fraction;
+                    file_type = corrupt_fault->file_type;
+                }
+            }
+
+            int pos = (int) ((1.0 - fraction) * size);
+            int buf_size = (int) size;
+
+            switch(fault) {
+                case CORRUPT_RAND:
+                    for (int i=0; i < buf_size; ++i) {
+                        if (RAND_FRAC <= fraction) {
+                            memset(buf+i, (int) round(RAND_FRAC * 255.0), 1);
+                        }
+                    }
+                    break;
+
+                case CORRUPT_ZERO:
+                    for (int i=0; i < buf_size; ++i) {
+                        if (RAND_FRAC <= fraction) {
+                            memset(buf+i, 0, 1);
+                        }
+                    }
+                    break;
+
+                case CORRUPT_RAND_SEQ:
+                    for (; pos < buf_size; ++pos) {
+                        memset(buf+pos, (int) round(RAND_FRAC * 255.0), 1);
+                    }
+                    break;
+
+                case CORRUPT_ZERO_SEQ:
+                    memset(buf+pos, 0, buf_size - pos);
+                    break;
+
+                case CORRUPT_DROP:
+                    size = size - pos;
+                    break;
+
+                // CORRUPT_ZERO
+                default:
+                    memset(buf+pos, 0, buf_size - pos);
+            }
+            ret = pwrite(file->fd, buf, size, offset);
+            uid = fuse_get_context()->uid;
+            DEBUG("kibosh_write_corrupt(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
+                                      "= write_corrupt(file_type=%s, mode=%d)\n",
+                                      file->path, size, (int64_t)offset, uid, file_type, fault);
+            return ret;
+        }
+
+        if (fault) {
+            DEBUG("kibosh_write(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
+                          "=  %d (%s)\n", file->path, size, (int64_t)offset, uid, fault,
+                          safe_strerror(fault));
+            return -fault;
+        }
+    }
 
     uid = fuse_get_context()->uid;
     ret = pwrite(file->fd, buf, size, offset);
@@ -286,6 +444,7 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
     // Our return code is consistent with the direct_io mount option.
     return ret;
 }
+_Pragma("GCC diagnostic pop")
 
 const char *kibosh_file_type_str(enum kibosh_file_type type)
 {

@@ -25,6 +25,20 @@
 #define KIBOSH_FAULT_TYPE_STR_LEN 32
 
 /**
+ * Constant flags for byte corruption modes.
+ */
+#define CORRUPT_ZERO 1000
+#define CORRUPT_RAND 1001
+#define CORRUPT_ZERO_SEQ 1100
+#define CORRUPT_RAND_SEQ 1101
+#define CORRUPT_DROP 1200
+
+/**
+ * Generate a random double between 0 and 1.0
+ */
+#define RAND_FRAC ((double)rand()/(double)RAND_MAX)
+
+/**
  * Base class for Kibosh faults.
  */
 struct kibosh_fault_base {
@@ -43,6 +57,21 @@ struct kibosh_fault_base {
  * The type of kibosh_fault_read_delay.
  */
 #define KIBOSH_FAULT_TYPE_READ_DELAY "read_delay"
+
+/**
+* The type of kibosh_fault_unwritable.
+*/
+#define KIBOSH_FAULT_TYPE_UNWRITABLE "unwritable"
+
+/**
+* The type of kibosh_fault_read_corrupt.
+*/
+#define KIBOSH_FAULT_TYPE_READ_CORRUPT "read_corrupt"
+
+/**
+* The type of kibosh_fault_write_corrupt.
+*/
+#define KIBOSH_FAULT_TYPE_WRITE_CORRUPT "write_corrupt"
 
 /**
  * The class for Kibosh faults that make files unreadable.
@@ -85,6 +114,96 @@ struct kibosh_fault_read_delay {
 
     /**
      * The fraction of reads that are delayed.
+     */
+    double fraction;
+};
+
+/**
+* The class for Kibosh faults that make files unwritable.
+*/
+struct kibosh_fault_unwritable {
+    /**
+    * The base class members.
+    */
+    struct kibosh_fault_base base;
+
+    /**
+    * The path prefix.
+    */
+    char *prefix;
+
+    /**
+    * The error code to return from write faults.
+    */
+    int code;
+};
+
+/**
+* The class for Kibosh faults that lead to corrupted data when reading.
+*/
+struct kibosh_fault_read_corrupt {
+    /**
+    * The base class members.
+    */
+    struct kibosh_fault_base base;
+
+    /**
+    * The path prefix.
+    */
+    char *prefix;
+
+    /**
+    * The type of file to be corrupted.
+    */
+    char *file_type;
+
+    /**
+     * Mode of byte corruption.
+     * 1000 -> zeros (default)
+     * 1001 -> random values
+     * 1100 -> sequential zeros
+     * 1101 -> sequential random values
+     * 1200 -> drop a fraction of buffer
+     */
+    int mode;
+
+    /**
+     * The fraction of bytes corrupted. (Default = 0.5)
+     */
+    double fraction;
+};
+
+/**
+* The class for Kibosh faults that lead to corrupted data when writing.
+*/
+struct kibosh_fault_write_corrupt {
+    /**
+    * The base class members.
+    */
+    struct kibosh_fault_base base;
+
+    /**
+    * The path prefix.
+    */
+    char *prefix;
+
+    /**
+    * The type of file to be corrupted.
+    */
+    char *file_type;
+
+    /**
+     * Mode of byte corruption.
+     * 1000 -> zeros (default)
+     * 1001 -> random values
+     * 1100 -> sequential zeros
+     * 1101 -> sequential random values
+     * 1200 -> drop a fraction of buffer
+     */
+    int mode;
+
+    /**
+     * The fraction of bytes corrupted. (Default = 0.5)
      */
     double fraction;
 };

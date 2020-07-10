@@ -221,6 +221,9 @@ int kibosh_mkdir(const char *path, mode_t mode)
     if (mkdir(bpath, mode) < 0) {
         ret = -errno;
     }
+    if (chown(bpath, fuse_get_context()->uid, fuse_get_context()->gid) < 0) {
+        ret = -errno;
+    }
     DEBUG("kibosh_mkdir(path=%s, bpath=%s, mode=%04o) = %d\n",
           path, bpath, mode, ret);
     return AS_FUSE_ERR(ret);
