@@ -31,7 +31,7 @@
 #define CORRUPT_RAND 1001
 #define CORRUPT_ZERO_SEQ 1100
 #define CORRUPT_RAND_SEQ 1101
-#define CORRUPT_DROP 1200
+#define CORRUPT_DROP 1200       // this will silently drop all write calls
 
 /**
  * Generate a random double between 0 and 1.0
@@ -168,6 +168,11 @@ struct kibosh_fault_read_corrupt {
     int mode;
 
     /**
+     * Number of corruption fault injected before switching to unwritable fault. (Default = -1, never switch)
+     */
+    int count;
+
+    /**
      * The fraction of bytes corrupted. (Default = 0.5)
      */
     double fraction;
@@ -201,6 +206,11 @@ struct kibosh_fault_write_corrupt {
      * 1200 -> drop a fraction of buffer
      */
     int mode;
+
+    /**
+     * Number of corruption fault injected before switching to drop mode. (Default = -1, never switch)
+     */
+    int count;
 
     /**
      * The fraction of bytes corrupted. (Default = 0.5)

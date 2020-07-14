@@ -212,6 +212,16 @@ int main(int argc, char *argv[])
         INFO("kibosh_main: configured %s.\n", conf_str);
     }
 
+    /* Reset random seed for the process. */
+    if (conf->random_seed) {
+        srand(conf->random_seed);
+        INFO("kibosh_main: random seed is set to %d.\n", conf->random_seed);
+    } else {
+        int s = (int) round(time(0));
+        srand(s);
+        INFO("kibosh_main: random seed is set to %d.\n", s;
+    }
+
     /* Run main FUSE loop. */
     ret = fuse_main(args.argc, args.argv, &kibosh_oper, fs);
 

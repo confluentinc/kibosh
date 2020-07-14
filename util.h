@@ -18,6 +18,7 @@
 #define KIBOSH_UTIL_H
 
 #include "json.h" // for json_value
+#include "time.h" // for time(0)
 #include <unistd.h> // for size_t
 #include <math.h> // for round()
 

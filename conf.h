@@ -45,6 +45,11 @@ struct kibosh_conf {
      * Mode to use on the control file.
      */
     int control_mode;
+
+    /**
+     * Seed for random functions.
+     */
+    int random_seed;
 };
 
 enum kibosh_option_ty {

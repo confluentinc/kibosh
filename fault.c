@@ -17,7 +17,6 @@
 #include "fault.h"
 #include "json.h"
 #include "log.h"
-#include "time.h"
 #include "util.h"
 
 #include <errno.h>
@@ -161,7 +160,6 @@ static int kibosh_fault_read_delay_check(struct kibosh_fault_read_delay *fault, 
         return 0;
     }
     // apply fraction
-    srand((int) round(time(0)*RAND_FRAC));
     if (RAND_FRAC <= fault->fraction)
         milli_sleep(fault->delay_ms);
     return 0;
@@ -236,7 +234,7 @@ static int kibosh_fault_unwritable_check(struct kibosh_fault_unwritable *fault, 
 static struct kibosh_fault_read_corrupt *kibosh_fault_read_corrupt_parse(json_value *obj)
 {
     struct kibosh_fault_read_corrupt *fault = NULL;
-    json_value *mode_obj = NULL, *prefix_obj = NULL, *fraction_obj = NULL, *file_type_obj = NULL;
+    json_value *mode_obj = NULL, *count_obj = NULL, *prefix_obj = NULL, *fraction_obj = NULL, *file_type_obj = NULL;
 
     mode_obj = get_child(obj, "mode");
     if ((!mode_obj) || (mode_obj->type != json_integer)) {
@@ -277,6 +275,13 @@ static struct kibosh_fault_read_corrupt *kibosh_fault_read_corrupt_parse(json_va
     } else {
         fault->fraction = fraction_obj->u.dbl;
     }
+    count_obj = get_child(obj, "count");
+    if ((!count_obj) || (count_obj->type != json_integer)) {
+        INFO("kibosh_fault_read_corrupt_parse: No valid \"count\" field found in fault object, will never switch to drop mode\n");
+        fault->count = -1;
+    } else {
+        fault->count = count_obj->u.integer;
+    }
     fault->mode = mode_obj->u.integer;
     return fault;
 
@@ -312,6 +317,12 @@ static int kibosh_fault_read_corrupt_check(struct kibosh_fault_read_corrupt *fau
     if (fault->file_type != NULL && strstr(path, fault->file_type) == NULL) {
         return 0;
     }
+    if (fault->count > 0) {
+        fault->count--;
+    } else if (fault->count == 0) {
+        fault->mode = CORRUPT_DROP;
+        fault->fraction = 1.0;
+    }
     return fault->mode;
 }
 
@@ -321,7 +332,7 @@ static int kibosh_fault_read_corrupt_check(struct kibosh_fault_read_corrupt *fau
 static struct kibosh_fault_write_corrupt *kibosh_fault_write_corrupt_parse(json_value *obj)
 {
     struct kibosh_fault_write_corrupt *fault = NULL;
-    json_value *mode_obj = NULL, *prefix_obj = NULL, *fraction_obj = NULL, *file_type_obj = NULL;
+    json_value *mode_obj = NULL, *count_obj = NULL, *prefix_obj = NULL, *fraction_obj = NULL, *file_type_obj = NULL;
 
     mode_obj = get_child(obj, "mode");
     if ((!mode_obj) || (mode_obj->type != json_integer)) {
@@ -341,26 +352,33 @@ static struct kibosh_fault_write_corrupt *kibosh_fault_write_corrupt_parse(json_
     snprintf(fault->base.type, KIBOSH_FAULT_TYPE_STR_LEN, "%s", KIBOSH_FAULT_TYPE_WRITE_CORRUPT);
     fault->prefix = strdup(prefix_obj->u.string.ptr);
     if (!fault->prefix) {
-        INFO("kibosh_fault_read_corrupt_parse: OOM\n");
+        INFO("kibosh_fault_write_corrupt_parse: OOM\n");
         goto error;
     }
     file_type_obj = get_child(obj, "file_type");
     if ((!file_type_obj) || (file_type_obj->type != json_string)) {
-        INFO("kibosh_fault_read_corrupt_parse: No valid \"file_type\" field found in fault object, will apply read_corrupt to all files.\n");
+        INFO("kibosh_fault_write_corrupt_parse: No valid \"file_type\" field found in fault object, will apply write_corrupt to all files.\n");
         fault->file_type = NULL;
     } else {
         fault->file_type = strdup(file_type_obj->u.string.ptr);
         if (!fault->file_type) {
-            INFO("kibosh_fault_read_corrupt_parse: OOM\n");
+            INFO("kibosh_fault_write_corrupt_parse: OOM\n");
             goto error;
         }
     }
     fraction_obj = get_child(obj, "fraction");
     if ((!fraction_obj) || (fraction_obj->type != json_double)) {
-        INFO("kibosh_fault_read_corrupt_parse: No valid \"fraction\" field found in fault object, will apply read_corrupt to all bytes\n");
+        INFO("kibosh_fault_write_corrupt_parse: No valid \"fraction\" field found in fault object, will apply write_corrupt to all bytes\n");
         fault->fraction = 0.5;
     } else {
         fault->fraction = fraction_obj->u.dbl;
+    }
+    count_obj = get_child(obj, "count");
+    if ((!count_obj) || (count_obj->type != json_integer)) {
+        INFO("kibosh_fault_write_corrupt_parse: No valid \"count\" field found in fault object, will never switch to drop mode\n");
+        fault->count = -1;
+    } else {
+        fault->count = count_obj->u.integer;
     }
     fault->mode = mode_obj->u.integer;
     return fault;
@@ -396,6 +414,12 @@ static int kibosh_fault_write_corrupt_check(struct kibosh_fault_write_corrupt *f
     }
     if (fault->file_type != NULL && strstr(path, fault->file_type) == NULL) {
         return 0;
+    }
+    if (fault->count > 0) {
+        fault->count--;
+    } else if (fault->count == 0) {
+        fault->mode = CORRUPT_DROP;
+        fault->fraction = 1.0;
     }
     return fault->mode;
 }

@@ -283,7 +283,7 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                         break;
 
                     case CORRUPT_DROP:
-                        size = size - pos;
+                        ret = size - pos;
                         break;
 
                     // CORRUPT_ZERO
@@ -291,20 +291,11 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                         memset(buf+pos, 0, buf_size - pos);
                 }
 
-                int s = (int) round(time(0)*RAND_FRAC);
-                srand(s);
                 DEBUG("kibosh_read(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
-                              "= {\"mode\"=%d, \"fraction\"=%g, \"file_type\"=%s, \"rand_seed\"=%d}\n", file->path, size, (int64_t)offset, uid,
-                              fault, fraction, file_type, s);
-                for (int i=0; i < ret; i++) {
-                    // we corrupt a fraction of bytes
-                    if (RAND_FRAC <= fraction) {
-                        int b = 0;
-                        if (fault == CORRUPT_RAND)
-                            b = (int) round(RAND_FRAC * 255.0);
-                        memset(buf+i, b, 1);
-                    }
-                }
+                              "= read_corrupt{\"mode\"=%d, \"fraction\"=%g, \"file_type\"=%s}\n", file->path, size, (int64_t)offset, uid,
+                              fault, fraction, file_type);
+                DEBUG("kibosh_read reads: %s\n", strcat(buf, ""));
+
                 return ret;
             }
 
@@ -416,9 +407,10 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
             }
             ret = pwrite(file->fd, buf, size, offset);
             uid = fuse_get_context()->uid;
-            DEBUG("kibosh_write_corrupt(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
-                                      "= write_corrupt(file_type=%s, mode=%d)\n",
+            DEBUG("kibosh_write(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
+                                      "= write_corrupt{file_type=%s, mode=%d}\n",
                                       file->path, size, (int64_t)offset, uid, file_type, fault);
+            DEBUG("kibosh_write writes: %s\n", strcat(buf, ""));
             return ret;
         }
 
