@@ -31,7 +31,7 @@
 #define CORRUPT_RAND 1001
 #define CORRUPT_ZERO_SEQ 1100
 #define CORRUPT_RAND_SEQ 1101
-#define CORRUPT_DROP 1200       // this will silently drop all write calls
+#define CORRUPT_DROP 1200       // this will silently drop data from write calls
 
 /**
  * Generate a random double between 0 and 1.0
@@ -59,18 +59,18 @@ struct kibosh_fault_base {
 #define KIBOSH_FAULT_TYPE_READ_DELAY "read_delay"
 
 /**
-* The type of kibosh_fault_unwritable.
-*/
+ * The type of kibosh_fault_unwritable.
+ */
 #define KIBOSH_FAULT_TYPE_UNWRITABLE "unwritable"
 
 /**
-* The type of kibosh_fault_read_corrupt.
-*/
+ * The type of kibosh_fault_read_corrupt.
+ */
 #define KIBOSH_FAULT_TYPE_READ_CORRUPT "read_corrupt"
 
 /**
-* The type of kibosh_fault_write_corrupt.
-*/
+ * The type of kibosh_fault_write_corrupt.
+ */
 #define KIBOSH_FAULT_TYPE_WRITE_CORRUPT "write_corrupt"
 
 /**
@@ -83,9 +83,14 @@ struct kibosh_fault_unreadable {
     struct kibosh_fault_base base;
 
     /**
-     * The path prefix.
+     * The path prefix, starts with '/'.
      */
     char *prefix;
+
+    /**
+     * The type of file to be made unreadable.
+     */
+    char *file_type;
 
     /**
      * The error code to return from read faults.
@@ -103,9 +108,14 @@ struct kibosh_fault_read_delay {
     struct kibosh_fault_base base;
 
     /**
-     * The path prefix.
+     * The path prefix, starts with '/'.
      */
     char *prefix;
+
+    /**
+     * The type of file to be delayed in read.
+     */
+    char *file_type;
 
     /**
      * The number of milliseconds to delay the read.
@@ -119,42 +129,47 @@ struct kibosh_fault_read_delay {
 };
 
 /**
-* The class for Kibosh faults that make files unwritable.
-*/
+ * The class for Kibosh faults that make files unwritable.
+ */
 struct kibosh_fault_unwritable {
     /**
-    * The base class members.
-    */
+     * The base class members.
+     */
     struct kibosh_fault_base base;
 
     /**
-    * The path prefix.
-    */
+     * The path prefix, starts with '/'.
+     */
     char *prefix;
 
     /**
-    * The error code to return from write faults.
-    */
+     * The type of file to be made unwritable.
+     */
+    char *file_type;
+
+    /**
+     * The error code to return from write faults.
+     */
     int code;
 };
 
 /**
-* The class for Kibosh faults that lead to corrupted data when reading.
-*/
+ * The class for Kibosh faults that lead to corrupted data when reading.
+ */
 struct kibosh_fault_read_corrupt {
     /**
-    * The base class members.
-    */
+     * The base class members.
+     */
     struct kibosh_fault_base base;
 
     /**
-    * The path prefix.
-    */
+     * The path prefix, starts with '/'.
+     */
     char *prefix;
 
     /**
-    * The type of file to be corrupted.
-    */
+     * The type of file to be corrupted.
+     */
     char *file_type;
 
     /**
@@ -163,33 +178,34 @@ struct kibosh_fault_read_corrupt {
      * 1001 -> random values
      * 1100 -> sequential zeros
      * 1101 -> sequential random values
-     * 1200 -> drop a fraction of buffer
+     * 1200 -> silently drop a fraction of bytes at the end of buffer
      */
     int mode;
 
     /**
-     * Number of corruption fault injected before switching to unwritable fault. (Default = -1, never switch)
+     * Number of corruption fault injected before switching to unwritable fault.
+     * Less than 0 means never switch.
      */
     int count;
 
     /**
-     * The fraction of bytes corrupted. (Default = 0.5)
+     * The fraction of bytes to be corrupted.
      */
     double fraction;
 };
 
 /**
-* The class for Kibosh faults that lead to corrupted data when writing.
-*/
+ * The class for Kibosh faults that lead to corrupted data when writing.
+ */
 struct kibosh_fault_write_corrupt {
     /**
-    * The base class members.
-    */
+     * The base class members.
+     */
     struct kibosh_fault_base base;
 
     /**
-    * The path prefix.
-    */
+     * The path prefix, starts with '/'.
+     */
     char *prefix;
 
     /**
@@ -203,17 +219,18 @@ struct kibosh_fault_write_corrupt {
      * 1001 -> random values
      * 1100 -> sequential zeros
      * 1101 -> sequential random values
-     * 1200 -> drop a fraction of buffer
+     * 1200 -> silently drop a fraction of bytes at the end of buffer
      */
     int mode;
 
     /**
-     * Number of corruption fault injected before switching to drop mode. (Default = -1, never switch)
+     * Number of corruption fault injected before switching to CORRUPT_DROP with fraction = 1.0.
+     * Less than 0 means never switch.
      */
     int count;
 
     /**
-     * The fraction of bytes corrupted. (Default = 0.5)
+     * The fraction of bytes to be corrupted.
      */
     double fraction;
 };
@@ -228,9 +245,9 @@ struct kibosh_faults {
 /**
  * Allocate an empty Kibosh faults structure.
  *
- * @param out       (out parameter) the new Kibosh faults structre
+ * @param out       (out parameter) the new Kibosh faults structure
  *
- * @return          0 on sucess, or the negative error code on error.
+ * @return          0 on success, or the negative error code on error.
  */
 int faults_calloc(struct kibosh_faults **out);
 
@@ -266,7 +283,7 @@ char *kibosh_fault_base_unparse(struct kibosh_fault_base *fault);
 int kibosh_fault_base_check(struct kibosh_fault_base *fault, const char *path, const char *op);
 
 /**
- * Free the memory associated with a fault objectg.
+ * Free the memory associated with a fault object.
  *
  * @param fault     The fault object.
  */

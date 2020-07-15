@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
     } else {
         int s = (int) round(time(0));
         srand(s);
-        INFO("kibosh_main: random seed is set to %d.\n", s;
+        INFO("kibosh_main: random seed is set to %d.\n", s);
     }
 
     /* Run main FUSE loop. */

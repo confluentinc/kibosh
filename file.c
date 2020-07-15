@@ -240,7 +240,7 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
 
             // inject read_corrupt fault
             if (fault >= CORRUPT_ZERO) {
-                double fraction = 0.5;
+                double fraction = 0.0;
                 char *file_type = NULL;
                 struct kibosh_fault_base **iter;
                 struct kibosh_fault_read_corrupt *corrupt_fault;
@@ -252,12 +252,11 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                     }
                 }
 
-                int pos = (int) ((1.0 - fraction) * size);
-                int buf_size = (int) size;
+                int pos = (int) ((1.0 - fraction) * ret);
 
                 switch(fault) {
                     case CORRUPT_RAND:
-                        for (int i=0; i < buf_size; i++) {
+                        for (int i=0; i < ret; i++) {
                             if (RAND_FRAC <= fraction) {
                                 memset(buf+i, (int) round(RAND_FRAC * 255.0), 1);
                             }
@@ -265,7 +264,7 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                         break;
 
                     case CORRUPT_ZERO:
-                        for (int i=0; i < buf_size; i++) {
+                        for (int i=0; i < ret; i++) {
                             if (RAND_FRAC <= fraction) {
                                 memset(buf+i, 0, 1);
                             }
@@ -273,28 +272,37 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                         break;
 
                     case CORRUPT_RAND_SEQ:
-                        for (; pos < buf_size; ++pos) {
+                        for (; pos < ret; ++pos) {
                             memset(buf+pos, (int) round(RAND_FRAC * 255.0), 1);
                         }
                         break;
 
                     case CORRUPT_ZERO_SEQ:
-                        memset(buf+pos, 0, buf_size - pos);
+                        memset(buf+pos, 0, ret - pos);
                         break;
 
                     case CORRUPT_DROP:
-                        ret = size - pos;
+                        ret = pos;
                         break;
 
                     // CORRUPT_ZERO
                     default:
-                        memset(buf+pos, 0, buf_size - pos);
+                        memset(buf+pos, 0, ret - pos);
                 }
 
                 DEBUG("kibosh_read(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
-                              "= read_corrupt{\"mode\"=%d, \"fraction\"=%g, \"file_type\"=%s}\n", file->path, size, (int64_t)offset, uid,
-                              fault, fraction, file_type);
-                DEBUG("kibosh_read reads: %s\n", strcat(buf, ""));
+                              "= read_corrupt{mode=%d, fraction=%g, file_type=%s, ret=%d}\n", file->path, size, (int64_t)offset, uid,
+                              fault, fraction, file_type, ret);
+                char buf_read[ret + 1];
+                for (int i=0; i<ret; ++i) {
+                    if (buf[i] == 0) {
+                        buf_read[i] = '?';
+                    } else {
+                        buf_read[i] = buf[i];
+                    }
+                }
+                buf_read[ret] = '\0';
+                DEBUG("kibosh_read reads: %s\n", buf_read);
 
                 return ret;
             }
@@ -353,9 +361,9 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
     if (file->type == KIBOSH_FILE_TYPE_NORMAL) {
         fault = kibosh_fs_check_write_fault(fs, file->path);
 
-        // need to inject write_corrupt
+        // inject write_corrupt fault
         if (fault >= CORRUPT_ZERO) {
-            double fraction = 0.5;
+            double fraction = 0.0;
             char *file_type = NULL;
             struct kibosh_fault_base **iter;
             struct kibosh_fault_write_corrupt *corrupt_fault;
@@ -398,7 +406,7 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
                     break;
 
                 case CORRUPT_DROP:
-                    size = size - pos;
+                    size = pos;
                     break;
 
                 // CORRUPT_ZERO
@@ -408,12 +416,28 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
             ret = pwrite(file->fd, buf, size, offset);
             uid = fuse_get_context()->uid;
             DEBUG("kibosh_write(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
-                                      "= write_corrupt{file_type=%s, mode=%d}\n",
-                                      file->path, size, (int64_t)offset, uid, file_type, fault);
-            DEBUG("kibosh_write writes: %s\n", strcat(buf, ""));
-            return ret;
+                                      "= write_corrupt{mode=%d, fraction=%g, file_type=%s, ret=%d}\n",
+                                      file->path, size, (int64_t)offset, uid, fault, fraction, file_type, ret);
+            char buf_write[ret + 1];
+            for (int i=0; i<ret; ++i) {
+                if (buf[i] == 0) {
+                    buf_write[i] = '?';
+                } else {
+                    buf_write[i] = buf[i];
+                }
+            }
+            buf_write[ret] = '\0';
+            DEBUG("kibosh_write writes: %s\n", buf_write);
+
+            if (ret >= 0) {
+                // If pwrite does not return an error, always return the original size of buffer, we want to silently drop part of the data.
+                return buf_size;
+            } else {
+                return ret;
+            }
         }
 
+        // inject unwritable fault
         if (fault) {
             DEBUG("kibosh_write(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
                           "=  %d (%s)\n", file->path, size, (int64_t)offset, uid, fault,
