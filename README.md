@@ -53,7 +53,16 @@ Example:
     {"faults":[]}
 
     # Configure a new fault.
-    $ echo '{"faults":[{"type":"unreadable", "code":5}]}' > /kibosh_mnt/kibosh_control
+    # add unreadable fault
+    $ echo '{"faults":[{"type":"unreadable", "prefix":"", "file_type":"", "code":5}]}' > /kibosh_mnt/kibosh_control
+    # add unwritable fault
+    $ echo '{"faults":[{"type":"unwritable", "prefix":"", "file_type":"", "code":5}]}' > /kibosh_mnt/kibosh_control
+    # add read_delay fault
+    $ echo '{"faults":[{"type":"read_delay", "prefix":"", "file_type":"", "delay_ms":1000, "fraction":1.0}]}' > /kibosh_mnt/kibosh_control
+    # add read_corrupt fault
+    $ echo '{"faults":[{"type":"read_corrupt", "prefix":"", "file_type":"", "mode":1000, "fraction":0.5, "count":-1}]}' > /kibosh_mnt/kibosh_control
+    # add write_corrupt fault
+    $ echo '{"faults":[{"type":"write_corrupt", "prefix":"", "file_type":"", "mode":1000, "fraction":0.5, "count":-1}]}' > /kibosh_mnt/kibosh_control
 
 # License
 
