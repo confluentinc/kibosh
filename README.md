@@ -63,6 +63,9 @@ Example:
     $ echo '{"faults":[{"type":"read_corrupt", "prefix":"", "file_type":"", "mode":1000, "fraction":0.5, "count":-1}]}' > /kibosh_mnt/kibosh_control
     # add write_corrupt fault
     $ echo '{"faults":[{"type":"write_corrupt", "prefix":"", "file_type":"", "mode":1000, "fraction":0.5, "count":-1}]}' > /kibosh_mnt/kibosh_control
+    
+    # Remove all faults.
+    $ echo '{"faults":[]}' > /kibosh_mnt/kibosh_control
 
 # License
 
