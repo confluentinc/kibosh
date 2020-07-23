@@ -76,6 +76,8 @@ static void kibosh_usage(const char *argv0)
 "    --target <path>         The directory which we are mirroring (required)\n"
 "    --control-mode <mode>   The octal mode to use on the root-owned control file.\n"
 "                            Defaults to 0600.\n"
+"    --random-seed <seed>    The seed for random generator.\n"
+"                            Defaults to current time.\n"
 "    -v/--verbose            Turn on verbose logging.\n\n"
 "    -h/--help               This help text.\n\n"
 "    --fuse-help             Get help about possible FUSE options.\n"
@@ -257,7 +259,7 @@ static void kibosh_destroy(void *fs)
 {
     INFO("kibosh shut down gracefully.\n");
 
-    int sret = system("sudo sh -c \"kill -9 $(ps aux | grep -i '/proc/sys/vm/drop_caches' | grep -Po '^.*?\K[0-9]+' -m 1)\"");
+    int sret = system("sudo sh -c \"kill -9 $(ps aux | grep -i '/proc/sys/vm/drop_caches' | grep -Po '^.*?\\K[0-9]+' -m 1)\"");
     INFO("clear cache process is killed. %d.\n", sret);
 
     kibosh_fs_free(fs);

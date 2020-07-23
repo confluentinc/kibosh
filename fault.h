@@ -192,6 +192,13 @@ struct kibosh_fault_read_corrupt {
      * The fraction of bytes to be corrupted.
      */
     double fraction;
+
+    /**
+     * Whether to store corrupted data to log.
+     * 0 means do not store data.
+     * Greater than 0 means store data to log.
+     */
+    int store_data;
 };
 
 /**
@@ -233,6 +240,13 @@ struct kibosh_fault_write_corrupt {
      * The fraction of bytes to be corrupted.
      */
     double fraction;
+
+    /**
+     * Whether to store corrupted data to log.
+     * 0 or less means do not store data.
+     * Greater than 0 means store data to log.
+     */
+    int store_data;
 };
 
 struct kibosh_faults {
