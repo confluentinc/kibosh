@@ -242,6 +242,7 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
             if (fault >= CORRUPT_ZERO) {
                 double fraction = 0.0;
                 char *file_type = NULL;
+                int store_data = 0;
                 struct kibosh_fault_base **iter;
                 struct kibosh_fault_read_corrupt *corrupt_fault;
                 for (iter = fs->faults->list; *iter; iter++) {
@@ -249,6 +250,7 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                         corrupt_fault = (struct kibosh_fault_read_corrupt*)(*iter);
                         fraction = corrupt_fault->fraction;
                         file_type = corrupt_fault->file_type;
+                        store_data = corrupt_fault->store_data;
                     }
                 }
 
@@ -293,16 +295,15 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                 DEBUG("kibosh_read(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
                               "= read_corrupt{mode=%d, fraction=%g, file_type=%s, ret=%d}\n", file->path, size, (int64_t)offset, uid,
                               fault, fraction, file_type, ret);
-                char buf_read[ret + 1];
-                for (int i=0; i<ret; ++i) {
-                    if (buf[i] == 0) {
-                        buf_read[i] = '?';
-                    } else {
-                        buf_read[i] = buf[i];
+
+                if (store_data > 0) {
+                    char buf_read[ret * 2 + 1];
+                    for (int i=0; i<ret; ++i) {
+                        sprintf(buf_read+i*2, "%02X", buf[i]);
                     }
+                    buf_read[ret*2] = '\0';
+                    INFO("kibosh_read reads: %s\n", buf_read);
                 }
-                buf_read[ret] = '\0';
-                DEBUG("kibosh_read reads: %s\n", buf_read);
 
                 return ret;
             }
@@ -366,12 +367,14 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
             double fraction = 0.0;
             char *file_type = NULL;
             struct kibosh_fault_base **iter;
+            int store_data = 0;
             struct kibosh_fault_write_corrupt *corrupt_fault;
             for (iter = fs->faults->list; *iter; iter++) {
                 if (strcmp((*iter)->type, KIBOSH_FAULT_TYPE_WRITE_CORRUPT) == 0) {
                     corrupt_fault = (struct kibosh_fault_write_corrupt*)(*iter);
                     fraction = corrupt_fault->fraction;
                     file_type = corrupt_fault->file_type;
+                    store_data = corrupt_fault->store_data;
                 }
             }
 
@@ -418,16 +421,15 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
             DEBUG("kibosh_write(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
                                       "= write_corrupt{mode=%d, fraction=%g, file_type=%s, ret=%d}\n",
                                       file->path, size, (int64_t)offset, uid, fault, fraction, file_type, ret);
-            char buf_write[ret + 1];
-            for (int i=0; i<ret; ++i) {
-                if (buf[i] == 0) {
-                    buf_write[i] = '?';
-                } else {
-                    buf_write[i] = buf[i];
+
+            if (store_data > 0) {
+                char buf_write[ret * 2 + 1];
+                for (int i=0; i<ret; ++i) {
+                    sprintf(buf_write+i*2, "%02X", buf[i]);
                 }
+                buf_write[ret*2] = '\0';
+                INFO("kibosh_write writes: %s\n", buf_write);
             }
-            buf_write[ret] = '\0';
-            DEBUG("kibosh_write writes: %s\n", buf_write);
 
             if (ret >= 0) {
                 // If pwrite does not return an error, always return the original size of buffer, we want to silently drop part of the data.

@@ -6,12 +6,36 @@ Kibosh acts as a pass-through layer on top of existing filesystems.  Usually,
 it simply forwards each request on to the underlying filesystems, but it can be
 configured to inject arbitrary faults.
 
-# Build Requirements
+# Environment
 
 Kibosh runs on Linux.  We do not currently support Mac or Windows.
 
+If running in a container environment, the container needs to be run with 
+additional options giving Kibosh access to FUSE.
+
+    --cap-add SYS_ADMIN     # this allows Kibosh to mount a FUSE filesystem
+    --device /dev/fuse      # this exposes Kibosh to the FUSE device
+    
+Alternatively, the container can be run with --privileged flag which grants
+Kibosh all the permissions it needs.
+
+    $ docker run --privileged -ti ubuntu /bin/bash
+
+# Build Requirements
+
 In order to build Kibosh, you must have the CMake build system installed, and a
-C compiler.  We also depend on the development libraries for FUSE.
+C compiler.  We also depend on the development libraries for FUSE.  Pkg-config is
+used by configure script to gather paths of required libraries.
+
+Dependencies can be installed with the following commands.  Run configure before
+make to verify all required dependencies are installed.
+
+    # install cmake
+    $ apt-get install cmake
+    # install libfuse
+    $ apt-get install libfuse-dev
+    # install pkg-config
+    $ apt-get install pkg-config
 
 # Building
 
@@ -32,6 +56,10 @@ To run Kibosh, you supply the mount point as the first argument, and the
 directory which you would like to mirror as the second argument.
 
     $ ./kibosh /kibosh_mnt --target /mnt
+    
+Here is an example to run Kibosh with more options:
+
+    $ ./kibosh --target /mnt/kibosh/target --pidfile /mnt/kibosh/log/pidfile --log /mnt/kibosh/log/kibosh.log /mnt/kibosh/mirror
 
 For more usage information, try:
 
@@ -48,11 +76,11 @@ Example:
     # Mount the filesystem.
     $ ./kibosh /kibosh_mnt --target /mnt
 
-    # Verify that there are no faults set
+    # Verify that there are no faults set, this shows current fault JSON.
     $ cat /kibosh_mnt/kibosh_control
     {"faults":[]}
 
-    # Configure a new fault.
+    # Inject a new fault.
     # add unreadable fault
     $ echo '{"faults":[{"type":"unreadable", "prefix":"", "file_type":"", "code":5}]}' > /kibosh_mnt/kibosh_control
     # add unwritable fault
@@ -60,9 +88,9 @@ Example:
     # add read_delay fault
     $ echo '{"faults":[{"type":"read_delay", "prefix":"", "file_type":"", "delay_ms":1000, "fraction":1.0}]}' > /kibosh_mnt/kibosh_control
     # add read_corrupt fault
-    $ echo '{"faults":[{"type":"read_corrupt", "prefix":"", "file_type":"", "mode":1000, "fraction":0.5, "count":-1}]}' > /kibosh_mnt/kibosh_control
+    $ echo '{"faults":[{"type":"read_corrupt", "prefix":"", "file_type":"", "mode":1000, "fraction":0.5, "count":-1, "store_data":1}]}' > /kibosh_mnt/kibosh_control
     # add write_corrupt fault
-    $ echo '{"faults":[{"type":"write_corrupt", "prefix":"", "file_type":"", "mode":1000, "fraction":0.5, "count":-1}]}' > /kibosh_mnt/kibosh_control
+    $ echo '{"faults":[{"type":"write_corrupt", "prefix":"", "file_type":"", "mode":1000, "fraction":0.5, "count":-1, "store_data":1}]}' > /kibosh_mnt/kibosh_control
     
     # Remove all faults.
     $ echo '{"faults":[]}' > /kibosh_mnt/kibosh_control
