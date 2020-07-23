@@ -32,8 +32,13 @@ make to verify all required dependencies are installed.
 
     # install cmake
     $ apt-get install cmake
+    
     # install libfuse
     $ apt-get install libfuse-dev
+    
+    # install fuse (for fusermount)
+    $ apt-get install fuse
+    
     # install pkg-config
     $ apt-get install pkg-config
 
@@ -52,10 +57,10 @@ To run the tests for Kibosh, type:
 
 # Running
 
-To run Kibosh, you supply the mount point as the first argument, and the
-directory which you would like to mirror as the second argument.
+To run Kibosh, you supply a mirror as the mount point as the first argument, 
+and a target directory which you would like to mirror as the second argument.
 
-    $ ./kibosh /kibosh_mnt --target /mnt
+    $ ./kibosh <mirror_dir> --target <target_dir>
     
 Here is an example to run Kibosh with more options:
 
@@ -80,20 +85,29 @@ Example:
     $ cat /kibosh_mnt/kibosh_control
     {"faults":[]}
 
-    # Inject a new fault.
+    # Inject new faults:
     # add unreadable fault
     $ echo '{"faults":[{"type":"unreadable", "prefix":"", "file_type":"", "code":5}]}' > /kibosh_mnt/kibosh_control
+    
     # add unwritable fault
     $ echo '{"faults":[{"type":"unwritable", "prefix":"", "file_type":"", "code":5}]}' > /kibosh_mnt/kibosh_control
+    
     # add read_delay fault
     $ echo '{"faults":[{"type":"read_delay", "prefix":"", "file_type":"", "delay_ms":1000, "fraction":1.0}]}' > /kibosh_mnt/kibosh_control
+    
     # add read_corrupt fault
     $ echo '{"faults":[{"type":"read_corrupt", "prefix":"", "file_type":"", "mode":1000, "fraction":0.5, "count":-1, "store_data":1}]}' > /kibosh_mnt/kibosh_control
+    
     # add write_corrupt fault
     $ echo '{"faults":[{"type":"write_corrupt", "prefix":"", "file_type":"", "mode":1000, "fraction":0.5, "count":-1, "store_data":1}]}' > /kibosh_mnt/kibosh_control
     
     # Remove all faults.
     $ echo '{"faults":[]}' > /kibosh_mnt/kibosh_control
+
+# Unmount Kibosh
+
+    # fuse needs to be installed, use sudo if necessary.
+    $ fusermount -u <mirror_dir>
 
 # License
 
