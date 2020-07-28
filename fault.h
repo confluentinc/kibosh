@@ -27,11 +27,13 @@
 /**
  * Constant flags for byte corruption modes.
  */
-#define CORRUPT_ZERO 1000
-#define CORRUPT_RAND 1001
-#define CORRUPT_ZERO_SEQ 1100
-#define CORRUPT_RAND_SEQ 1101
-#define CORRUPT_DROP 1200       // this will silently drop data from write calls
+typedef enum {
+    CORRUPT_ZERO = 1000,        // replace bytes at random positions with \0
+    CORRUPT_RAND = 1001,        // replace bytes at random positions with random char value
+    CORRUPT_ZERO_SEQ = 1100,    // replace sequential bytes at the end of the file with \0
+    CORRUPT_RAND_SEQ = 1101,    // replace sequential bytes at the end of the file with random char value
+    CORRUPT_DROP = 1200,        // silently drop bytes at the end of the file
+} corrupt_mode;
 
 /**
  * Base class for Kibosh faults.
