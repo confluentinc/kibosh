@@ -34,11 +34,6 @@
 #define CORRUPT_DROP 1200       // this will silently drop data from write calls
 
 /**
- * Generate a random double between 0 and 1.0
- */
-#define RAND_FRAC ((double)rand()/(double)RAND_MAX)
-
-/**
  * Base class for Kibosh faults.
  */
 struct kibosh_fault_base {

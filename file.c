@@ -29,7 +29,6 @@
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -259,15 +258,15 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                 switch(fault) {
                     case CORRUPT_RAND:
                         for (int i=0; i < ret; i++) {
-                            if (RAND_FRAC <= fraction) {
-                                memset(buf+i, (int) round(RAND_FRAC * 255.0), 1);
+                            if (random_fraction() <= fraction) {
+                                memset(buf+i, (int) round(random_fraction() * 255.0), 1);
                             }
                         }
                         break;
 
                     case CORRUPT_ZERO:
                         for (int i=0; i < ret; i++) {
-                            if (RAND_FRAC <= fraction) {
+                            if (random_fraction() <= fraction) {
                                 memset(buf+i, 0, 1);
                             }
                         }
@@ -275,7 +274,7 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
 
                     case CORRUPT_RAND_SEQ:
                         for (; pos < ret; ++pos) {
-                            memset(buf+pos, (int) round(RAND_FRAC * 255.0), 1);
+                            memset(buf+pos, (int) round(random_fraction() * 255.0), 1);
                         }
                         break;
 
@@ -384,15 +383,15 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
             switch(fault) {
                 case CORRUPT_RAND:
                     for (int i=0; i < buf_size; ++i) {
-                        if (RAND_FRAC <= fraction) {
-                            memset(buf+i, (int) round(RAND_FRAC * 255.0), 1);
+                        if (random_fraction() <= fraction) {
+                            memset(buf+i, (int) round(random_fraction() * 255.0), 1);
                         }
                     }
                     break;
 
                 case CORRUPT_ZERO:
                     for (int i=0; i < buf_size; ++i) {
-                        if (RAND_FRAC <= fraction) {
+                        if (random_fraction() <= fraction) {
                             memset(buf+i, 0, 1);
                         }
                     }
@@ -400,7 +399,7 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
 
                 case CORRUPT_RAND_SEQ:
                     for (; pos < buf_size; ++pos) {
-                        memset(buf+pos, (int) round(RAND_FRAC * 255.0), 1);
+                        memset(buf+pos, (int) round(random_fraction() * 255.0), 1);
                     }
                     break;
 

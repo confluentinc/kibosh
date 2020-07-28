@@ -21,6 +21,7 @@
 #include "time.h" // for time(0)
 #include <unistd.h> // for size_t
 #include <math.h> // for round()
+#include <stdlib.h> // for rand()
 
 /**
  * Like snprintf, but appends to a string that already exists.
@@ -99,6 +100,13 @@ int recursive_unlink(const char *name);
  * @return              A negative error code on failure; the file descriptor otherwise.
  */
 int memfd_create(const char *name, int mode);
+
+/**
+ * Generate a random double between 0 and 1.0
+ *
+ * @return              A random double between 0 and 1.0.
+ */
+double random_fraction();
 
 #ifdef __GNUC__
 #define UNUSED __attribute__((__unused__))
