@@ -309,7 +309,7 @@ int memfd_create(const char *name, int mode)
 
 double random_fraction()
 {
-    return ((double)rand()/(double)RAND_MAX)
+    return ((double)rand()/(double)RAND_MAX);
 }
 
 // vim: ts=4:sw=4:tw=99:et
