@@ -36,7 +36,7 @@ static void kibosh_fault_unreadable_free(struct kibosh_fault_unreadable *fault)
 {
     if (fault) {
         free(fault->prefix);
-        free(fault->file_type);
+        free(fault->suffix);
         free(fault);
     }
 }
@@ -45,7 +45,7 @@ static void kibosh_fault_read_delay_free(struct kibosh_fault_read_delay *fault)
 {
     if (fault) {
         free(fault->prefix);
-        free(fault->file_type);
+        free(fault->suffix);
         free(fault);
     }
 }
@@ -54,7 +54,7 @@ static void kibosh_fault_unwritable_free(struct kibosh_fault_unwritable *fault)
 {
     if (fault) {
         free(fault->prefix);
-        free(fault->file_type);
+        free(fault->suffix);
         free(fault);
     }
 }
@@ -63,7 +63,7 @@ static void kibosh_fault_read_corrupt_free(struct kibosh_fault_read_corrupt *fau
 {
     if (fault) {
         free(fault->prefix);
-        free(fault->file_type);
+        free(fault->suffix);
         free(fault);
     }
 }
@@ -72,7 +72,7 @@ static void kibosh_fault_write_corrupt_free(struct kibosh_fault_write_corrupt *f
 {
     if (fault) {
         free(fault->prefix);
-        free(fault->file_type);
+        free(fault->suffix);
         free(fault);
     }
 }
@@ -85,7 +85,7 @@ static struct kibosh_fault_unreadable *kibosh_fault_unreadable_parse(json_value 
     struct kibosh_fault_unreadable *fault = NULL;
     json_value *code_obj = NULL;
     json_value *prefix_obj = NULL;
-    json_value *file_type_obj = NULL;
+    json_value *suffix_obj = NULL;
 
     code_obj = get_child(obj, "code");
     if ((!code_obj) || (code_obj->type != json_integer)) {
@@ -97,9 +97,9 @@ static struct kibosh_fault_unreadable *kibosh_fault_unreadable_parse(json_value 
         INFO("%s: No valid \"prefix\" field found in fault object.\n", __func__);
         goto error;
     }
-    file_type_obj = get_child(obj, "file_type");
-    if ((!file_type_obj) || (file_type_obj->type != json_string)) {
-        INFO("%s: No valid \"file_type\" field found in fault object.\n", __func__);
+    suffix_obj = get_child(obj, "suffix");
+    if ((!suffix_obj) || (suffix_obj->type != json_string)) {
+        INFO("%s: No valid \"suffix\" field found in fault object.\n", __func__);
         goto error;
     }
     fault = calloc(1, sizeof(*fault));
@@ -113,8 +113,8 @@ static struct kibosh_fault_unreadable *kibosh_fault_unreadable_parse(json_value 
         INFO("%s: OOM\n", __func__);
         goto error;
     }
-    fault->file_type = strdup(file_type_obj->u.string.ptr);
-    if (!fault->file_type) {
+    fault->suffix = strdup(suffix_obj->u.string.ptr);
+    if (!fault->suffix) {
         INFO("%s: OOM\n", __func__);
         goto error;
     }
@@ -130,11 +130,11 @@ static char *kibosh_fault_unreadable_unparse(struct kibosh_fault_unreadable *fau
 {
     return dynprintf("{\"type\":\"%s\", "
                     "\"prefix\":\"%s\", "
-                    "\"file_type\":\"%s\", "
+                    "\"suffix\":\"%s\", "
                     "\"code\":%d}",
                     KIBOSH_FAULT_TYPE_UNREADABLE,
                     fault->prefix,
-                    fault->file_type,
+                    fault->suffix,
                     fault->code);
 }
 
@@ -147,8 +147,8 @@ static int kibosh_fault_unreadable_check(struct kibosh_fault_unreadable *fault, 
     if (strncmp(path, fault->prefix, strlen(fault->prefix)) != 0) {
         return 0;
     }
-    if (strlen(fault->file_type) > strlen(path) ||
-        strcmp(path+(strlen(path)-strlen(fault->file_type)), fault->file_type) != 0) {
+    if (strlen(fault->suffix) > strlen(path) ||
+        strcmp(path+(strlen(path)-strlen(fault->suffix)), fault->suffix) != 0) {
         return 0;
     }
     return fault->code;
@@ -162,7 +162,7 @@ static struct kibosh_fault_read_delay *kibosh_fault_read_delay_parse(json_value 
     struct kibosh_fault_read_delay *fault = NULL;
     json_value *delay_ms_obj = NULL;
     json_value *prefix_obj = NULL;
-    json_value *file_type_obj = NULL;
+    json_value *suffix_obj = NULL;
     json_value *fraction_obj = NULL;
 
     delay_ms_obj = get_child(obj, "delay_ms");
@@ -175,9 +175,9 @@ static struct kibosh_fault_read_delay *kibosh_fault_read_delay_parse(json_value 
         INFO("%s: No valid \"prefix\" field found in fault object.\n", __func__);
         goto error;
     }
-    file_type_obj = get_child(obj, "file_type");
-    if ((!file_type_obj) || (file_type_obj->type != json_string)) {
-        INFO("%s: No valid \"file_type\" field found in fault object.\n", __func__);
+    suffix_obj = get_child(obj, "suffix");
+    if ((!suffix_obj) || (suffix_obj->type != json_string)) {
+        INFO("%s: No valid \"suffix\" field found in fault object.\n", __func__);
         goto error;
     }
     fraction_obj = get_child(obj, "fraction");
@@ -196,8 +196,8 @@ static struct kibosh_fault_read_delay *kibosh_fault_read_delay_parse(json_value 
         INFO("%s: OOM\n", __func__);
         goto error;
     }
-    fault->file_type = strdup(file_type_obj->u.string.ptr);
-    if (!fault->file_type) {
+    fault->suffix = strdup(suffix_obj->u.string.ptr);
+    if (!fault->suffix) {
         INFO("%s: OOM\n", __func__);
         goto error;
     }
@@ -214,12 +214,12 @@ static char *kibosh_fault_read_delay_unparse(struct kibosh_fault_read_delay *fau
 {
     return dynprintf("{\"type\":\"%s\", "
                     "\"prefix\":\"%s\", "
-                    "\"file_type\":\"%s\", "
+                    "\"suffix\":\"%s\", "
                     "\"delay_ms\":%"PRId32"d, "
                     "\"fraction\":%g}",
                     KIBOSH_FAULT_TYPE_READ_DELAY,
                     fault->prefix,
-                    fault->file_type,
+                    fault->suffix,
                     fault->delay_ms,
                     fault->fraction);
 }
@@ -233,13 +233,16 @@ static int kibosh_fault_read_delay_check(struct kibosh_fault_read_delay *fault, 
     if (strncmp(path, fault->prefix, strlen(fault->prefix)) != 0) {
         return 0;
     }
-    if (strlen(fault->file_type) > strlen(path) ||
-        strcmp(path+(strlen(path)-strlen(fault->file_type)), fault->file_type) != 0) {
+    if (strlen(fault->suffix) > strlen(path) ||
+        strcmp(path+(strlen(path)-strlen(fault->suffix)), fault->suffix) != 0) {
         return 0;
     }
     // apply fraction
-    if (random_fraction() <= fault->fraction)
+    if (random_fraction() <= fault->fraction) {
+        INFO("[read_delay fault injected] {path=%s, prefix=%s, suffix=%s, fraction=%g, delay_ms=%d}\n",
+            path, fault->prefix, fault->suffix, fault->fraction, fault->delay_ms);
         milli_sleep(fault->delay_ms);
+    }
     return 0;
 }
 
@@ -251,7 +254,7 @@ static struct kibosh_fault_unwritable *kibosh_fault_unwritable_parse(json_value 
     struct kibosh_fault_unwritable *fault = NULL;
     json_value *code_obj = NULL;
     json_value *prefix_obj = NULL;
-    json_value *file_type_obj = NULL;
+    json_value *suffix_obj = NULL;
 
     code_obj = get_child(obj, "code");
     if ((!code_obj) || (code_obj->type != json_integer)) {
@@ -263,9 +266,9 @@ static struct kibosh_fault_unwritable *kibosh_fault_unwritable_parse(json_value 
         INFO("%s: No valid \"prefix\" field found in fault object.\n", __func__);
         goto error;
     }
-    file_type_obj = get_child(obj, "file_type");
-    if ((!file_type_obj) || (file_type_obj->type != json_string)) {
-        INFO("%s: No valid \"file_type\" field found in fault object.\n", __func__);
+    suffix_obj = get_child(obj, "suffix");
+    if ((!suffix_obj) || (suffix_obj->type != json_string)) {
+        INFO("%s: No valid \"suffix\" field found in fault object.\n", __func__);
         goto error;
     }
     fault = calloc(1, sizeof(*fault));
@@ -279,8 +282,8 @@ static struct kibosh_fault_unwritable *kibosh_fault_unwritable_parse(json_value 
         INFO("%s: OOM\n", __func__);
         goto error;
     }
-    fault->file_type = strdup(file_type_obj->u.string.ptr);
-    if (!fault->file_type) {
+    fault->suffix = strdup(suffix_obj->u.string.ptr);
+    if (!fault->suffix) {
         INFO("%s: OOM\n", __func__);
         goto error;
     }
@@ -296,11 +299,11 @@ static char *kibosh_fault_unwritable_unparse(struct kibosh_fault_unwritable *fau
 {
     return dynprintf("{\"type\":\"%s\", "
                     "\"prefix\":\"%s\", "
-                    "\"file_type\":\"%s\", "
+                    "\"suffix\":\"%s\", "
                     "\"code\":%d}",
                     KIBOSH_FAULT_TYPE_UNWRITABLE,
                     fault->prefix,
-                    fault->file_type,
+                    fault->suffix,
                     fault->code);
 }
 
@@ -313,8 +316,8 @@ static int kibosh_fault_unwritable_check(struct kibosh_fault_unwritable *fault, 
     if (strncmp(path, fault->prefix, strlen(fault->prefix)) != 0) {
         return 0;
     }
-    if (strlen(fault->file_type) > strlen(path) ||
-        strcmp(path+(strlen(path)-strlen(fault->file_type)), fault->file_type) != 0) {
+    if (strlen(fault->suffix) > strlen(path) ||
+        strcmp(path+(strlen(path)-strlen(fault->suffix)), fault->suffix) != 0) {
         return 0;
     }
     return fault->code;
@@ -330,8 +333,7 @@ static struct kibosh_fault_read_corrupt *kibosh_fault_read_corrupt_parse(json_va
     json_value *count_obj = NULL;
     json_value *prefix_obj = NULL;
     json_value *fraction_obj = NULL;
-    json_value *file_type_obj = NULL;
-    json_value *store_data_obj = NULL;
+    json_value *suffix_obj = NULL;
 
     mode_obj = get_child(obj, "mode");
     if ((!mode_obj) || (mode_obj->type != json_integer)) {
@@ -343,9 +345,9 @@ static struct kibosh_fault_read_corrupt *kibosh_fault_read_corrupt_parse(json_va
         INFO("%s: No valid \"prefix\" field found in fault object.\n", __func__);
         goto error;
     }
-    file_type_obj = get_child(obj, "file_type");
-    if ((!file_type_obj) || (file_type_obj->type != json_string)) {
-        INFO("%s: No valid \"file_type\" field found in fault object.\n", __func__);
+    suffix_obj = get_child(obj, "suffix");
+    if ((!suffix_obj) || (suffix_obj->type != json_string)) {
+        INFO("%s: No valid \"suffix\" field found in fault object.\n", __func__);
         goto error;
     }
     fraction_obj = get_child(obj, "fraction");
@@ -356,11 +358,6 @@ static struct kibosh_fault_read_corrupt *kibosh_fault_read_corrupt_parse(json_va
     count_obj = get_child(obj, "count");
     if ((!count_obj) || (count_obj->type != json_integer)) {
         INFO("%s: No valid \"count\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    store_data_obj = get_child(obj, "store_data");
-    if ((!store_data_obj) || (store_data_obj->type != json_integer)) {
-        INFO("%s: No valid \"store_data\" field found in fault object.\n", __func__);
         goto error;
     }
     fault = calloc(1, sizeof(*fault));
@@ -374,15 +371,14 @@ static struct kibosh_fault_read_corrupt *kibosh_fault_read_corrupt_parse(json_va
         INFO("%s: OOM\n", __func__);
         goto error;
     }
-    fault->file_type = strdup(file_type_obj->u.string.ptr);
-    if (!fault->file_type) {
+    fault->suffix = strdup(suffix_obj->u.string.ptr);
+    if (!fault->suffix) {
         INFO("%s: OOM\n", __func__);
         goto error;
     }
     fault->mode = mode_obj->u.integer;
     fault->count = count_obj->u.integer;
     fault->fraction = fraction_obj->u.dbl;
-    fault->store_data = store_data_obj->u.integer;
     return fault;
 
 error:
@@ -394,12 +390,12 @@ static char *kibosh_fault_read_corrupt_unparse(struct kibosh_fault_read_corrupt 
 {
     return dynprintf("{\"type\":\"%s\", "
                     "\"prefix\":\"%s\", "
-                    "\"file_type\":\"%s\", "
+                    "\"suffix\":\"%s\", "
                     "\"mode\":%d, "
                     "\"fraction\":%g}",
                     KIBOSH_FAULT_TYPE_READ_CORRUPT,
                     fault->prefix,
-                    fault->file_type,
+                    fault->suffix,
                     fault->mode,
                     fault->fraction);
 }
@@ -413,8 +409,8 @@ static int kibosh_fault_read_corrupt_check(struct kibosh_fault_read_corrupt *fau
     if (strncmp(path, fault->prefix, strlen(fault->prefix)) != 0) {
         return 0;
     }
-    if (strlen(fault->file_type) > strlen(path) ||
-        strcmp(path+(strlen(path)-strlen(fault->file_type)), fault->file_type) != 0) {
+    if (strlen(fault->suffix) > strlen(path) ||
+        strcmp(path+(strlen(path)-strlen(fault->suffix)), fault->suffix) != 0) {
         return 0;
     }
     if (fault->count > 0) {
@@ -436,8 +432,7 @@ static struct kibosh_fault_write_corrupt *kibosh_fault_write_corrupt_parse(json_
     json_value *count_obj = NULL;
     json_value *prefix_obj = NULL;
     json_value *fraction_obj = NULL;
-    json_value *file_type_obj = NULL;
-    json_value *store_data_obj = NULL;
+    json_value *suffix_obj = NULL;
 
     mode_obj = get_child(obj, "mode");
     if ((!mode_obj) || (mode_obj->type != json_integer)) {
@@ -449,9 +444,9 @@ static struct kibosh_fault_write_corrupt *kibosh_fault_write_corrupt_parse(json_
         INFO("%s: No valid \"prefix\" field found in fault object.\n", __func__);
         goto error;
     }
-    file_type_obj = get_child(obj, "file_type");
-    if ((!file_type_obj) || (file_type_obj->type != json_string)) {
-        INFO("%s: No valid \"file_type\" field found in fault object.\n", __func__);
+    suffix_obj = get_child(obj, "suffix");
+    if ((!suffix_obj) || (suffix_obj->type != json_string)) {
+        INFO("%s: No valid \"suffix\" field found in fault object.\n", __func__);
         goto error;
     }
     fraction_obj = get_child(obj, "fraction");
@@ -462,11 +457,6 @@ static struct kibosh_fault_write_corrupt *kibosh_fault_write_corrupt_parse(json_
     count_obj = get_child(obj, "count");
     if ((!count_obj) || (count_obj->type != json_integer)) {
         INFO("%s: No valid \"count\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    store_data_obj = get_child(obj, "store_data");
-    if ((!store_data_obj) || (store_data_obj->type != json_integer)) {
-        INFO("%s: No valid \"store_data\" field found in fault object.\n", __func__);
         goto error;
     }
     fault = calloc(1, sizeof(*fault));
@@ -480,15 +470,14 @@ static struct kibosh_fault_write_corrupt *kibosh_fault_write_corrupt_parse(json_
         INFO("%s: OOM\n", __func__);
         goto error;
     }
-    fault->file_type = strdup(file_type_obj->u.string.ptr);
-    if (!fault->file_type) {
+    fault->suffix = strdup(suffix_obj->u.string.ptr);
+    if (!fault->suffix) {
         INFO("%s: OOM\n", __func__);
         goto error;
     }
     fault->mode = mode_obj->u.integer;
     fault->count = count_obj->u.integer;
     fault->fraction = fraction_obj->u.dbl;
-    fault->store_data = store_data_obj->u.integer;
     return fault;
 
 error:
@@ -500,12 +489,12 @@ static char *kibosh_fault_write_corrupt_unparse(struct kibosh_fault_write_corrup
 {
     return dynprintf("{\"type\":\"%s\", "
                     "\"prefix\":\"%s\", "
-                    "\"file_type\":\"%s\", "
+                    "\"suffix\":\"%s\", "
                     "\"mode\":%d, "
                     "\"fraction\":%g}",
                     KIBOSH_FAULT_TYPE_WRITE_CORRUPT,
                     fault->prefix,
-                    fault->file_type,
+                    fault->suffix,
                     fault->mode,
                     fault->fraction);
 }
@@ -519,8 +508,8 @@ static int kibosh_fault_write_corrupt_check(struct kibosh_fault_write_corrupt *f
     if (strncmp(path, fault->prefix, strlen(fault->prefix)) != 0) {
         return 0;
     }
-    if (strlen(fault->file_type) > strlen(path) ||
-        strcmp(path+(strlen(path)-strlen(fault->file_type)), fault->file_type) != 0) {
+    if (strlen(fault->suffix) > strlen(path) ||
+        strcmp(path+(strlen(path)-strlen(fault->suffix)), fault->suffix) != 0) {
         return 0;
     }
     if (fault->count > 0) {
