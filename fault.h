@@ -85,9 +85,9 @@ struct kibosh_fault_unreadable {
     char *prefix;
 
     /**
-     * The type of file to be made unreadable.
+     * The path suffix, can be used to specify a file extension.
      */
-    char *file_type;
+    char *suffix;
 
     /**
      * The error code to return from read faults.
@@ -110,9 +110,9 @@ struct kibosh_fault_read_delay {
     char *prefix;
 
     /**
-     * The type of file to be delayed in read.
+     * The path suffix, can be used to specify a file extension.
      */
-    char *file_type;
+    char *suffix;
 
     /**
      * The number of milliseconds to delay the read.
@@ -140,9 +140,9 @@ struct kibosh_fault_unwritable {
     char *prefix;
 
     /**
-     * The type of file to be made unwritable.
+     * The path suffix, can be used to specify a file extension.
      */
-    char *file_type;
+    char *suffix;
 
     /**
      * The error code to return from write faults.
@@ -165,9 +165,9 @@ struct kibosh_fault_read_corrupt {
     char *prefix;
 
     /**
-     * The type of file to be corrupted.
+     * The path suffix, can be used to specify a file extension.
      */
-    char *file_type;
+    char *suffix;
 
     /**
      * Mode of byte corruption.
@@ -189,13 +189,6 @@ struct kibosh_fault_read_corrupt {
      * The fraction of bytes to be corrupted.
      */
     double fraction;
-
-    /**
-     * Whether to store corrupted data to log.
-     * 0 means do not store data.
-     * Greater than 0 means store data to log.
-     */
-    int store_data;
 };
 
 /**
@@ -213,9 +206,9 @@ struct kibosh_fault_write_corrupt {
     char *prefix;
 
     /**
-    * The type of file to be corrupted.
+    * The path suffix, can be used to specify a file extension.
     */
-    char *file_type;
+    char *suffix;
 
     /**
      * Mode of byte corruption.
@@ -237,13 +230,6 @@ struct kibosh_fault_write_corrupt {
      * The fraction of bytes to be corrupted.
      */
     double fraction;
-
-    /**
-     * Whether to store corrupted data to log.
-     * 0 or less means do not store data.
-     * Greater than 0 means store data to log.
-     */
-    int store_data;
 };
 
 struct kibosh_faults {

@@ -87,19 +87,19 @@ Example:
 
     # Inject new faults:
     # add unreadable fault
-    $ echo '{"faults":[{"type":"unreadable", "prefix":"", "file_type":"", "code":5}]}' > /kibosh_mnt/kibosh_control
+    $ echo '{"faults":[{"type":"unreadable", "prefix":"", "suffix":"", "code":5}]}' > /kibosh_mnt/kibosh_control
     
     # add unwritable fault
-    $ echo '{"faults":[{"type":"unwritable", "prefix":"", "file_type":"", "code":5}]}' > /kibosh_mnt/kibosh_control
+    $ echo '{"faults":[{"type":"unwritable", "prefix":"", "suffix":"", "code":5}]}' > /kibosh_mnt/kibosh_control
     
     # add read_delay fault
-    $ echo '{"faults":[{"type":"read_delay", "prefix":"", "file_type":"", "delay_ms":1000, "fraction":1.0}]}' > /kibosh_mnt/kibosh_control
+    $ echo '{"faults":[{"type":"read_delay", "prefix":"", "suffix":"", "delay_ms":1000, "fraction":1.0}]}' > /kibosh_mnt/kibosh_control
     
     # add read_corrupt fault
-    $ echo '{"faults":[{"type":"read_corrupt", "prefix":"", "file_type":"", "mode":1000, "fraction":0.5, "count":-1, "store_data":1}]}' > /kibosh_mnt/kibosh_control
+    $ echo '{"faults":[{"type":"read_corrupt", "prefix":"", "suffix":"", "mode":1000, "fraction":0.5, "count":-1}]}' > /kibosh_mnt/kibosh_control
     
     # add write_corrupt fault
-    $ echo '{"faults":[{"type":"write_corrupt", "prefix":"", "file_type":"", "mode":1000, "fraction":0.5, "count":-1, "store_data":1}]}' > /kibosh_mnt/kibosh_control
+    $ echo '{"faults":[{"type":"write_corrupt", "prefix":"", "suffix":"", "mode":1000, "fraction":0.5, "count":-1}]}' > /kibosh_mnt/kibosh_control
     
     # Remove all faults.
     $ echo '{"faults":[]}' > /kibosh_mnt/kibosh_control
