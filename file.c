@@ -239,6 +239,7 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
 
             // inject read_corrupt fault
             if (fault >= CORRUPT_ZERO) {
+                int i;
                 double fraction = 0.0;
                 char *suffix = NULL;
                 struct kibosh_fault_base **iter;
@@ -255,7 +256,7 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
 
                 switch(fault) {
                     case CORRUPT_RAND:
-                        for (int i=0; i < ret; i++) {
+                        for (i=0; i < ret; i++) {
                             if (random_fraction() <= fraction) {
                                 memset(buf+i, (int) round(random_fraction() * 255.0), 1);
                             }
@@ -263,7 +264,7 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                         break;
 
                     case CORRUPT_ZERO:
-                        for (int i=0; i < ret; i++) {
+                        for (i=0; i < ret; i++) {
                             if (random_fraction() <= fraction) {
                                 memset(buf+i, 0, 1);
                             }
@@ -294,7 +295,7 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                               fault, fraction, suffix, ret);
 
                 char buf_read[ret * 2 + 1];
-                for (int i=0; i<ret; ++i) {
+                for (i=0; i<ret; ++i) {
                     sprintf(buf_read+i*2, "%02X", buf[i]);
                 }
                 buf_read[ret*2] = '\0';
@@ -362,6 +363,7 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
 
         // inject write_corrupt fault
         if (fault >= CORRUPT_ZERO) {
+            int i;
             double fraction = 0.0;
             char *suffix = NULL;
             struct kibosh_fault_base **iter;
@@ -379,7 +381,7 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
 
             switch(fault) {
                 case CORRUPT_RAND:
-                    for (int i=0; i < buf_size; ++i) {
+                    for (i=0; i < buf_size; ++i) {
                         if (random_fraction() <= fraction) {
                             memset(buf+i, (int) round(random_fraction() * 255.0), 1);
                         }
@@ -387,7 +389,7 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
                     break;
 
                 case CORRUPT_ZERO:
-                    for (int i=0; i < buf_size; ++i) {
+                    for (i=0; i < buf_size; ++i) {
                         if (random_fraction() <= fraction) {
                             memset(buf+i, 0, 1);
                         }
@@ -419,7 +421,7 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
                                       file->path, size, (int64_t)offset, uid, fault, fraction, suffix, ret);
 
             char buf_write[ret * 2 + 1];
-            for (int i=0; i<ret; ++i) {
+            for (i=0; i<ret; ++i) {
                 sprintf(buf_write+i*2, "%02X", buf[i]);
             }
             buf_write[ret*2] = '\0';
