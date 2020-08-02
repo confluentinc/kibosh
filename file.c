@@ -308,8 +308,8 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
             if (fault) {
                 INFO("[unreadable fault injected] kibosh_read(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
                               "= %d (%s)\n", file->path, size, (int64_t)offset, uid,
-                              -ret, safe_strerror(-ret));
-                ret = -fault;
+                              fault, safe_strerror(fault));
+                return -fault;
             }
         }
     }
