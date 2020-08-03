@@ -226,7 +226,7 @@ int main(int argc, char *argv[])
     }
 
     /* Start a process to clear page cache every 5 seconds. */
-    int sret = system("while true; do sleep 5; sudo sh -c \"echo 1 > /proc/sys/vm/drop_caches\"; done &");
+    int sret = system("while true; do sleep .5; sudo sh -c \"echo 1 > /proc/sys/vm/drop_caches\"; done &");
     INFO("kibosh_main: started clear cache process. %d.\n", sret);
 
     /* Run main FUSE loop. */
