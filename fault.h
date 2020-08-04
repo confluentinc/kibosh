@@ -26,6 +26,9 @@
 
 /**
  * Constant flags for byte corruption modes.
+ * The mode numbers are chosen to be distinguished form ERRNO numbers (1 to 122).
+ * Random position modes are grouped in 1000s range and sequential byte modes are grouped in 1100s range
+ * so that more corruption modes can be added later for each group.
  */
 typedef enum {
     CORRUPT_ZERO = 1000,        // replace bytes at random positions with \0
