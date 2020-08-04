@@ -59,6 +59,15 @@ static void kibosh_fault_unwritable_free(struct kibosh_fault_unwritable *fault)
     }
 }
 
+static void kibosh_fault_write_delay_free(struct kibosh_fault_write_delay *fault)
+{
+    if (fault) {
+        free(fault->prefix);
+        free(fault->suffix);
+        free(fault);
+    }
+}
+
 static void kibosh_fault_read_corrupt_free(struct kibosh_fault_read_corrupt *fault)
 {
     if (fault) {
@@ -324,6 +333,98 @@ static int kibosh_fault_unwritable_check(struct kibosh_fault_unwritable *fault, 
 }
 
 /**
+ * kibosh_fault_write_delay
+ */
+static struct kibosh_fault_write_delay *kibosh_fault_write_delay_parse(json_value *obj)
+{
+    struct kibosh_fault_write_delay *fault = NULL;
+    json_value *delay_ms_obj = NULL;
+    json_value *prefix_obj = NULL;
+    json_value *suffix_obj = NULL;
+    json_value *fraction_obj = NULL;
+
+    delay_ms_obj = get_child(obj, "delay_ms");
+    if ((!delay_ms_obj) || (delay_ms_obj->type != json_integer)) {
+        INFO("%s: No valid \"delay_ms\" field found in fault object.\n", __func__);
+        goto error;
+    }
+    prefix_obj = get_child(obj, "prefix");
+    if ((!prefix_obj) || (prefix_obj->type != json_string)) {
+        INFO("%s: No valid \"prefix\" field found in fault object.\n", __func__);
+        goto error;
+    }
+    suffix_obj = get_child(obj, "suffix");
+    if ((!suffix_obj) || (suffix_obj->type != json_string)) {
+        INFO("%s: No valid \"suffix\" field found in fault object.\n", __func__);
+        goto error;
+    }
+    fraction_obj = get_child(obj, "fraction");
+    if ((!fraction_obj) || (fraction_obj->type != json_double)) {
+        INFO("%s: No valid \"fraction\" field found in fault object.\n", __func__);
+        goto error;
+    }
+    fault = calloc(1, sizeof(*fault));
+    if (!fault) {
+        INFO("%s: OOM\n", __func__);
+        return NULL;
+    }
+    snprintf(fault->base.type, KIBOSH_FAULT_TYPE_STR_LEN, "%s", KIBOSH_FAULT_TYPE_WRITE_DELAY);
+    fault->prefix = strdup(prefix_obj->u.string.ptr);
+    if (!fault->prefix) {
+        INFO("%s: OOM\n", __func__);
+        goto error;
+    }
+    fault->suffix = strdup(suffix_obj->u.string.ptr);
+    if (!fault->suffix) {
+        INFO("%s: OOM\n", __func__);
+        goto error;
+    }
+    fault->delay_ms = delay_ms_obj->u.integer;
+    fault->fraction = fraction_obj->u.dbl;
+    return fault;
+
+error:
+    kibosh_fault_write_delay_free(fault);
+    return NULL;
+}
+
+static char *kibosh_fault_write_delay_unparse(struct kibosh_fault_write_delay *fault)
+{
+    return dynprintf("{\"type\":\"%s\", "
+                    "\"prefix\":\"%s\", "
+                    "\"suffix\":\"%s\", "
+                    "\"delay_ms\":%"PRId32"d, "
+                    "\"fraction\":%g}",
+                    KIBOSH_FAULT_TYPE_WRITE_DELAY,
+                    fault->prefix,
+                    fault->suffix,
+                    fault->delay_ms,
+                    fault->fraction);
+}
+
+static int kibosh_fault_write_delay_check(struct kibosh_fault_write_delay *fault, const char *path,
+                                            const char *op)
+{
+    if (strcmp(op, "write") != 0) {
+        return 0;
+    }
+    if (strncmp(path, fault->prefix, strlen(fault->prefix)) != 0) {
+        return 0;
+    }
+    if (strlen(fault->suffix) > strlen(path) ||
+        strcmp(path+(strlen(path)-strlen(fault->suffix)), fault->suffix) != 0) {
+        return 0;
+    }
+    // apply fraction
+    if (random_fraction() <= fault->fraction) {
+        INFO("[write_delay fault injected] {path=%s, prefix=%s, suffix=%s, fraction=%g, delay_ms=%d}\n",
+            path, fault->prefix, fault->suffix, fault->fraction, fault->delay_ms);
+        milli_sleep(fault->delay_ms);
+    }
+    return 0;
+}
+
+/**
  * kibosh_fault_read_corrupt
  */
 static struct kibosh_fault_read_corrupt *kibosh_fault_read_corrupt_parse(json_value *obj)
@@ -541,6 +642,8 @@ struct kibosh_fault_base *kibosh_fault_base_parse(json_value *obj)
         return (struct kibosh_fault_base *)kibosh_fault_unreadable_parse(obj);
     } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_READ_DELAY) == 0) {
         return (struct kibosh_fault_base *)kibosh_fault_read_delay_parse(obj);
+    } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_WRITE_DELAY) == 0) {
+        return (struct kibosh_fault_base *)kibosh_fault_write_delay_parse(obj);
     } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_UNWRITABLE) == 0) {
         return (struct kibosh_fault_base *)kibosh_fault_unwritable_parse(obj);
     } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_READ_CORRUPT) == 0) {
@@ -558,6 +661,8 @@ char *kibosh_fault_base_unparse(struct kibosh_fault_base *fault)
         return kibosh_fault_unreadable_unparse((struct kibosh_fault_unreadable*)fault);
     } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_READ_DELAY) == 0) {
         return kibosh_fault_read_delay_unparse((struct kibosh_fault_read_delay*)fault);
+    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_WRITE_DELAY) == 0) {
+        return kibosh_fault_write_delay_unparse((struct kibosh_fault_write_delay*)fault);
     } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_UNWRITABLE) == 0) {
         return kibosh_fault_unwritable_unparse((struct kibosh_fault_unwritable*)fault);
     } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_READ_CORRUPT) == 0) {
@@ -574,6 +679,8 @@ int kibosh_fault_base_check(struct kibosh_fault_base *fault, const char *path, c
         return kibosh_fault_unreadable_check((struct kibosh_fault_unreadable*)fault, path, op);
     } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_READ_DELAY) == 0) {
         return kibosh_fault_read_delay_check((struct kibosh_fault_read_delay*)fault, path, op);
+    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_WRITE_DELAY) == 0) {
+        return kibosh_fault_write_delay_check((struct kibosh_fault_write_delay*)fault, path, op);
     } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_UNWRITABLE) == 0) {
         return kibosh_fault_unwritable_check((struct kibosh_fault_unwritable*)fault, path, op);
     } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_READ_CORRUPT) == 0) {
@@ -592,6 +699,8 @@ void kibosh_fault_base_free(struct kibosh_fault_base *fault)
         kibosh_fault_unreadable_free((struct kibosh_fault_unreadable*)fault);
     } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_READ_DELAY) == 0) {
         kibosh_fault_read_delay_free((struct kibosh_fault_read_delay*)fault);
+    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_WRITE_DELAY) == 0) {
+        kibosh_fault_write_delay_free((struct kibosh_fault_write_delay*)fault);
     } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_UNWRITABLE) == 0) {
         kibosh_fault_unwritable_free((struct kibosh_fault_unwritable*)fault);
     } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_READ_CORRUPT) == 0) {

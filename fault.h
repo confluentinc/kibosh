@@ -64,6 +64,11 @@ struct kibosh_fault_base {
 #define KIBOSH_FAULT_TYPE_UNWRITABLE "unwritable"
 
 /**
+ * The type of kibosh_fault_write_delay.
+ */
+#define KIBOSH_FAULT_TYPE_WRITE_DELAY "write_delay"
+
+/**
  * The type of kibosh_fault_read_corrupt.
  */
 #define KIBOSH_FAULT_TYPE_READ_CORRUPT "read_corrupt"
@@ -151,6 +156,36 @@ struct kibosh_fault_unwritable {
      * The error code to return from write faults.
      */
     int code;
+};
+
+/**
+ * The class for Kibosh faults that lead to delays when writing.
+ */
+struct kibosh_fault_write_delay {
+    /**
+     * The base class members.
+     */
+    struct kibosh_fault_base base;
+
+    /**
+     * The path prefix, starts with '/'.
+     */
+    char *prefix;
+
+    /**
+     * The path suffix, can be used to specify a file extension.
+     */
+    char *suffix;
+
+    /**
+     * The number of milliseconds to delay the read.
+     */
+    uint32_t delay_ms;
+
+    /**
+     * The fraction of writes that are delayed.
+     */
+    double fraction;
 };
 
 /**
