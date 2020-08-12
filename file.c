@@ -271,7 +271,7 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                         }
                         break;
 
-                    case CORRUPT_RAND_SEQ:
+                    case CORRUPT_RAND_SEQ: ;
                         int num_bytes = ret - pos;
                         char *random_buf = malloc(num_bytes);
                         for (i=0; i < num_bytes; i++) {
@@ -400,8 +400,8 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
                     }
                     break;
 
-                case CORRUPT_RAND_SEQ:
-                    int num_bytes = ret - pos;
+                case CORRUPT_RAND_SEQ: ;
+                    int num_bytes = buf_size - pos;
                     char *random_buf = malloc(num_bytes);
                     for (i=0; i < num_bytes; i++) {
                         random_buf[i] = (int) round(random_fraction() * 255.0);
