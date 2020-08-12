@@ -27,20 +27,7 @@ In order to build Kibosh, you must have the CMake build system installed, and a
 C compiler.  We also depend on the development libraries for FUSE.  Pkg-config is
 used by configure script to gather paths of required libraries.
 
-Dependencies can be installed with the following commands.  Run configure before
-make to verify all required dependencies are installed.
-
-    # install cmake
-    $ apt-get install cmake
-    
-    # install libfuse
-    $ apt-get install libfuse-dev
-    
-    # install fuse (for fusermount)
-    $ apt-get install fuse
-    
-    # install pkg-config
-    $ apt-get install pkg-config
+In Ubuntu, run `apt-get install cmake libfuse-dev fuse pkg-config` to install the dependencies.
 
 # Building
 
@@ -57,7 +44,7 @@ To run the tests for Kibosh, type:
 
 # Running
 
-To run Kibosh, you supply a mirror as the mount point as the first argument, 
+To run Kibosh, you supply a mirror directory as the mount point as the first argument, 
 and a target directory which you would like to mirror as the second argument.
 
     $ ./kibosh <mirror_dir> --target <target_dir>
