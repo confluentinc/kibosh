@@ -95,6 +95,9 @@ Example:
     # add read_delay fault
     $ echo '{"faults":[{"type":"read_delay", "prefix":"", "suffix":"", "delay_ms":1000, "fraction":1.0}]}' > /kibosh_mnt/kibosh_control
     
+    # add write_delay fault
+    $ echo '{"faults":[{"type":"write_delay", "prefix":"", "suffix":"", "delay_ms":1000, "fraction":1.0}]}' > /kibosh_mnt/kibosh_control
+
     # add read_corrupt fault
     $ echo '{"faults":[{"type":"read_corrupt", "prefix":"", "suffix":"", "mode":1000, "fraction":0.5, "count":-1}]}' > /kibosh_mnt/kibosh_control
     

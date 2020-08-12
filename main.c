@@ -225,7 +225,13 @@ int main(int argc, char *argv[])
         INFO("kibosh_main: random seed is set to %d.\n", s);
     }
 
-    /* Start a process to clear page cache every 1 second. */
+    /*
+     * Start a process to clear page cache every 1 second.
+     * The clear page cache process becomes necessary after direct_io option is removed.
+     * It serves two purposes:
+     * 1. preventing page cache from building up
+     * 2. force read and write calls to access the filesystem instead of the page cache to ensure fault can be injected
+     */
     int sret = system("while true; do sleep 1; sudo sh -c \"echo 1 > /proc/sys/vm/drop_caches\"; done &");
     INFO("kibosh_main: started clear cache process. %d.\n", sret);
 
