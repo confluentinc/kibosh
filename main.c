@@ -37,6 +37,7 @@
 #include <pthread.h>
 
 static struct fuse_operations kibosh_oper;
+int p1;
 
 // FUSE options which we always set.
 static const char * const MANDATORY_FUSE_OPTIONS[] = {
@@ -104,6 +105,16 @@ static int kibosh_process_option(void *data UNUSED, const char *arg UNUSED,
             break;
     }
     return 1;
+}
+
+void *clear_cache()
+{
+    for(;;)
+    {
+        int sret = system("sudo sh -c \"echo 1 > /proc/sys/vm/drop_caches\"");
+        DEBUG("kibosh_main: clear cache call returns: %d\n", sret);
+        milli_sleep(1000);
+    }
 }
 
 int main(int argc, char *argv[])
@@ -232,13 +243,19 @@ int main(int argc, char *argv[])
      * 1. preventing page cache from building up
      * 2. force read and write calls to access the filesystem instead of the page cache to ensure fault can be injected
      */
-    int sret = system("while true; do sleep 1; sudo sh -c \"echo 1 > /proc/sys/vm/drop_caches\"; done &");
-    INFO("kibosh_main: started clear cache process. %d.\n", sret);
+    p1 = fork();
 
-    /* Run main FUSE loop. */
-    ret = fuse_main(args.argc, args.argv, &kibosh_oper, fs);
+    if (p1 > 0) {
+        /* Run main FUSE loop. */
+        ret = fuse_main(args.argc, args.argv, &kibosh_oper, fs);
+    } else {
+        clear_cache();
+    }
 
 done:
+    if (p1 > 0) {
+        kill(p1, SIGKILL); // kills the clear cache process.
+    }
     fuse_opt_free_args(&args);
     kibosh_conf_free(conf);
     free(conf_str);
@@ -264,9 +281,6 @@ static void *kibosh_init(struct fuse_conn_info *conn)
 static void kibosh_destroy(void *fs)
 {
     INFO("kibosh shut down gracefully.\n");
-
-    int sret = system("sudo sh -c \"kill -9 $(ps aux | grep -i '/proc/sys/vm/drop_caches' | grep -Po '^.*?\\K[0-9]+' -m 1)\"");
-    INFO("clear cache process is killed. %d.\n", sret);
 
     kibosh_fs_free(fs);
 }

@@ -128,7 +128,7 @@ struct kibosh_fault_read_delay {
     uint32_t delay_ms;
 
     /**
-     * The fraction of reads that are delayed.
+     * The fraction of reads that are delayed. This should be a value between 0.0 and 1.0 inclusive.
      */
     double fraction;
 };
@@ -183,7 +183,7 @@ struct kibosh_fault_write_delay {
     uint32_t delay_ms;
 
     /**
-     * The fraction of writes that are delayed.
+     * The fraction of writes that are delayed. This should be a value between 0.0 and 1.0 inclusive.
      */
     double fraction;
 };
@@ -215,7 +215,7 @@ struct kibosh_fault_read_corrupt {
      * 1101 -> sequential random values
      * 1200 -> silently drop a fraction of bytes at the end of buffer
      */
-    int mode;
+    corrupt_mode mode;
 
     /**
      * Number of corruption fault injected before switching to unwritable fault.
@@ -224,7 +224,7 @@ struct kibosh_fault_read_corrupt {
     int count;
 
     /**
-     * The fraction of bytes to be corrupted.
+     * The fraction of bytes to be corrupted. This should be a value between 0.0 and 1.0 inclusive.
      */
     double fraction;
 };
@@ -256,7 +256,7 @@ struct kibosh_fault_write_corrupt {
      * 1101 -> sequential random values
      * 1200 -> silently drop a fraction of bytes at the end of buffer
      */
-    int mode;
+    corrupt_mode mode;
 
     /**
      * Number of corruption fault injected before switching to CORRUPT_DROP with fraction = 1.0.
@@ -265,7 +265,7 @@ struct kibosh_fault_write_corrupt {
     int count;
 
     /**
-     * The fraction of bytes to be corrupted.
+     * The fraction of bytes to be corrupted. This should be a value between 0.0 and 1.0 inclusive.
      */
     double fraction;
 };
