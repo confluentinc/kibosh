@@ -288,10 +288,6 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                     case CORRUPT_DROP:
                         ret = pos;
                         break;
-
-                    // CORRUPT_ZERO
-                    default:
-                        memset(buf+pos, 0, ret - pos);
                 }
 
                 INFO("[read_corrupt fault injected] kibosh_read(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
@@ -417,10 +413,6 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
                 case CORRUPT_DROP:
                     size = pos;
                     break;
-
-                // CORRUPT_ZERO
-                default:
-                    memset(buf+pos, 0, buf_size - pos);
             }
             ret = pwrite(file->fd, buf, size, offset);
             uid = fuse_get_context()->uid;
