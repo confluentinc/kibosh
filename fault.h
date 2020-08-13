@@ -30,13 +30,13 @@
  * Random position modes are grouped in 1000s range and sequential byte modes are grouped in 1100s range
  * so that more corruption modes can be added later for each group.
  */
-typedef enum {
+enum corruption_type {
     CORRUPT_ZERO = 1000,        // replace bytes at random positions with \0
     CORRUPT_RAND = 1001,        // replace bytes at random positions with random char value
     CORRUPT_ZERO_SEQ = 1100,    // replace sequential bytes at the end of the file with \0
     CORRUPT_RAND_SEQ = 1101,    // replace sequential bytes at the end of the file with random char value
     CORRUPT_DROP = 1200,        // silently drop bytes at the end of the file
-} corrupt_mode;
+};
 
 /**
  * Base class for Kibosh faults.
@@ -208,14 +208,9 @@ struct kibosh_fault_read_corrupt {
     char *suffix;
 
     /**
-     * Mode of byte corruption.
-     * 1000 -> zeros (default)
-     * 1001 -> random values
-     * 1100 -> sequential zeros
-     * 1101 -> sequential random values
-     * 1200 -> silently drop a fraction of bytes at the end of buffer
+     * The mode of read corruption.
      */
-    corrupt_mode mode;
+    enum corruption_type mode;
 
     /**
      * Number of corruption fault injected before switching to unwritable fault.
@@ -249,14 +244,9 @@ struct kibosh_fault_write_corrupt {
     char *suffix;
 
     /**
-     * Mode of byte corruption.
-     * 1000 -> zeros (default)
-     * 1001 -> random values
-     * 1100 -> sequential zeros
-     * 1101 -> sequential random values
-     * 1200 -> silently drop a fraction of bytes at the end of buffer
+     * The mode of write corruption.
      */
-    corrupt_mode mode;
+    enum corruption_type mode;
 
     /**
      * Number of corruption fault injected before switching to CORRUPT_DROP with fraction = 1.0.
