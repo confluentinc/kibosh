@@ -28,15 +28,10 @@
 #define KIBOSH_CONF_OPT(t, p, v) { t, offsetof(struct kibosh_conf, p), v }
 
 struct fuse_opt kibosh_command_line_options[] = {
-     KIBOSH_CONF_OPT("--pidfile=%s", pidfile_path, 0),
      KIBOSH_CONF_OPT("--pidfile %s", pidfile_path, 0),
-     KIBOSH_CONF_OPT("--log=%s", log_path, 0),
      KIBOSH_CONF_OPT("--log %s", log_path, 0),
-     KIBOSH_CONF_OPT("--target=%s", target_path, 0),
      KIBOSH_CONF_OPT("--target %s", target_path, 0),
-     KIBOSH_CONF_OPT("--control-mode=%o", control_mode, 0600),
      KIBOSH_CONF_OPT("--control-mode %o", control_mode, 0600),
-     KIBOSH_CONF_OPT("--random-seed=%d", random_seed, 0),
      KIBOSH_CONF_OPT("--random-seed %d", random_seed, 0),
      KIBOSH_CONF_OPT("-v", verbose, 1),
      KIBOSH_CONF_OPT("--verbose", verbose, 1),
