@@ -34,8 +34,10 @@
 #include <sys/types.h>
 #include <sys/xattr.h>
 #include <unistd.h>
+#include <pthread.h>
 
 static struct fuse_operations kibosh_oper;
+int p1;
 
 // FUSE options which we always set.
 static const char * const MANDATORY_FUSE_OPTIONS[] = {
@@ -75,6 +77,8 @@ static void kibosh_usage(const char *argv0)
 "    --target <path>         The directory which we are mirroring (required)\n"
 "    --control-mode <mode>   The octal mode to use on the root-owned control file.\n"
 "                            Defaults to 0600.\n"
+"    --random-seed <seed>    The seed for random generator.\n"
+"                            Defaults to current time.\n"
 "    -v/--verbose            Turn on verbose logging.\n\n"
 "    -h/--help               This help text.\n\n"
 "    --fuse-help             Get help about possible FUSE options.\n"
@@ -101,6 +105,16 @@ static int kibosh_process_option(void *data UNUSED, const char *arg UNUSED,
             break;
     }
     return 1;
+}
+
+void *clear_cache()
+{
+    for(;;)
+    {
+        int sret = system("sudo sh -c \"echo 1 > /proc/sys/vm/drop_caches\"");
+        DEBUG("kibosh_main: clear cache call returns: %d\n", sret);
+        milli_sleep(1000);
+    }
 }
 
 int main(int argc, char *argv[])
@@ -212,10 +226,36 @@ int main(int argc, char *argv[])
         INFO("kibosh_main: configured %s.\n", conf_str);
     }
 
-    /* Run main FUSE loop. */
-    ret = fuse_main(args.argc, args.argv, &kibosh_oper, fs);
+    /* Reset random seed for the process. */
+    if (conf->random_seed) {
+        srand(conf->random_seed);
+        INFO("kibosh_main: random seed is set to %d.\n", conf->random_seed);
+    } else {
+        int s = (int) round(time(0));
+        srand(s);
+        INFO("kibosh_main: random seed is set to %d.\n", s);
+    }
+
+    /*
+     * Start a process to clear page cache every 1 second.
+     * The clear page cache process becomes necessary after direct_io option is removed.
+     * It serves two purposes:
+     * 1. preventing page cache from building up
+     * 2. force read and write calls to access the filesystem instead of the page cache to ensure fault can be injected
+     */
+    p1 = fork();
+
+    if (p1 > 0) {
+        /* Run main FUSE loop. */
+        ret = fuse_main(args.argc, args.argv, &kibosh_oper, fs);
+    } else {
+        clear_cache();
+    }
 
 done:
+    if (p1 > 0) {
+        kill(p1, SIGKILL); // kills the clear cache process.
+    }
     fuse_opt_free_args(&args);
     kibosh_conf_free(conf);
     free(conf_str);
@@ -241,6 +281,7 @@ static void *kibosh_init(struct fuse_conn_info *conn)
 static void kibosh_destroy(void *fs)
 {
     INFO("kibosh shut down gracefully.\n");
+
     kibosh_fs_free(fs);
 }
 

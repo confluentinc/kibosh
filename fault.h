@@ -25,6 +25,20 @@
 #define KIBOSH_FAULT_TYPE_STR_LEN 32
 
 /**
+ * Constant flags for byte corruption modes.
+ * The mode numbers are chosen to be distinguished form ERRNO numbers (1 to 122).
+ * Random position modes are grouped in 1000s range and sequential byte modes are grouped in 1100s range
+ * so that more corruption modes can be added later for each group.
+ */
+typedef enum {
+    CORRUPT_ZERO = 1000,        // replace bytes at random positions with \0
+    CORRUPT_RAND = 1001,        // replace bytes at random positions with random char value
+    CORRUPT_ZERO_SEQ = 1100,    // replace sequential bytes at the end of the file with \0
+    CORRUPT_RAND_SEQ = 1101,    // replace sequential bytes at the end of the file with random char value
+    CORRUPT_DROP = 1200,        // silently drop bytes at the end of the file
+} corrupt_mode;
+
+/**
  * Base class for Kibosh faults.
  */
 struct kibosh_fault_base {
@@ -45,6 +59,26 @@ struct kibosh_fault_base {
 #define KIBOSH_FAULT_TYPE_READ_DELAY "read_delay"
 
 /**
+ * The type of kibosh_fault_unwritable.
+ */
+#define KIBOSH_FAULT_TYPE_UNWRITABLE "unwritable"
+
+/**
+ * The type of kibosh_fault_write_delay.
+ */
+#define KIBOSH_FAULT_TYPE_WRITE_DELAY "write_delay"
+
+/**
+ * The type of kibosh_fault_read_corrupt.
+ */
+#define KIBOSH_FAULT_TYPE_READ_CORRUPT "read_corrupt"
+
+/**
+ * The type of kibosh_fault_write_corrupt.
+ */
+#define KIBOSH_FAULT_TYPE_WRITE_CORRUPT "write_corrupt"
+
+/**
  * The class for Kibosh faults that make files unreadable.
  */
 struct kibosh_fault_unreadable {
@@ -54,9 +88,14 @@ struct kibosh_fault_unreadable {
     struct kibosh_fault_base base;
 
     /**
-     * The path prefix.
+     * The path prefix, starts with '/'.
      */
     char *prefix;
+
+    /**
+     * The path suffix, can be used to specify a file extension.
+     */
+    char *suffix;
 
     /**
      * The error code to return from read faults.
@@ -74,9 +113,14 @@ struct kibosh_fault_read_delay {
     struct kibosh_fault_base base;
 
     /**
-     * The path prefix.
+     * The path prefix, starts with '/'.
      */
     char *prefix;
+
+    /**
+     * The path suffix, can be used to specify a file extension.
+     */
+    char *suffix;
 
     /**
      * The number of milliseconds to delay the read.
@@ -84,7 +128,144 @@ struct kibosh_fault_read_delay {
     uint32_t delay_ms;
 
     /**
-     * The fraction of reads that are delayed.
+     * The fraction of reads that are delayed. This should be a value between 0.0 and 1.0 inclusive.
+     */
+    double fraction;
+};
+
+/**
+ * The class for Kibosh faults that make files unwritable.
+ */
+struct kibosh_fault_unwritable {
+    /**
+     * The base class members.
+     */
+    struct kibosh_fault_base base;
+
+    /**
+     * The path prefix, starts with '/'.
+     */
+    char *prefix;
+
+    /**
+     * The path suffix, can be used to specify a file extension.
+     */
+    char *suffix;
+
+    /**
+     * The error code to return from write faults.
+     */
+    int code;
+};
+
+/**
+ * The class for Kibosh faults that lead to delays when writing.
+ */
+struct kibosh_fault_write_delay {
+    /**
+     * The base class members.
+     */
+    struct kibosh_fault_base base;
+
+    /**
+     * The path prefix, starts with '/'.
+     */
+    char *prefix;
+
+    /**
+     * The path suffix, can be used to specify a file extension.
+     */
+    char *suffix;
+
+    /**
+     * The number of milliseconds to delay the read.
+     */
+    uint32_t delay_ms;
+
+    /**
+     * The fraction of writes that are delayed. This should be a value between 0.0 and 1.0 inclusive.
+     */
+    double fraction;
+};
+
+/**
+ * The class for Kibosh faults that lead to corrupted data when reading.
+ */
+struct kibosh_fault_read_corrupt {
+    /**
+     * The base class members.
+     */
+    struct kibosh_fault_base base;
+
+    /**
+     * The path prefix, starts with '/'.
+     */
+    char *prefix;
+
+    /**
+     * The path suffix, can be used to specify a file extension.
+     */
+    char *suffix;
+
+    /**
+     * Mode of byte corruption.
+     * 1000 -> zeros (default)
+     * 1001 -> random values
+     * 1100 -> sequential zeros
+     * 1101 -> sequential random values
+     * 1200 -> silently drop a fraction of bytes at the end of buffer
+     */
+    corrupt_mode mode;
+
+    /**
+     * Number of corruption fault injected before switching to unwritable fault.
+     * Less than 0 means never switch.
+     */
+    int count;
+
+    /**
+     * The fraction of bytes to be corrupted. This should be a value between 0.0 and 1.0 inclusive.
+     */
+    double fraction;
+};
+
+/**
+ * The class for Kibosh faults that lead to corrupted data when writing.
+ */
+struct kibosh_fault_write_corrupt {
+    /**
+     * The base class members.
+     */
+    struct kibosh_fault_base base;
+
+    /**
+     * The path prefix, starts with '/'.
+     */
+    char *prefix;
+
+    /**
+    * The path suffix, can be used to specify a file extension.
+    */
+    char *suffix;
+
+    /**
+     * Mode of byte corruption.
+     * 1000 -> zeros (default)
+     * 1001 -> random values
+     * 1100 -> sequential zeros
+     * 1101 -> sequential random values
+     * 1200 -> silently drop a fraction of bytes at the end of buffer
+     */
+    corrupt_mode mode;
+
+    /**
+     * Number of corruption fault injected before switching to CORRUPT_DROP with fraction = 1.0.
+     * Less than 0 means never switch.
+     */
+    int count;
+
+    /**
+     * The fraction of bytes to be corrupted. This should be a value between 0.0 and 1.0 inclusive.
      */
     double fraction;
 };
@@ -99,9 +280,9 @@ struct kibosh_faults {
 /**
  * Allocate an empty Kibosh faults structure.
  *
- * @param out       (out parameter) the new Kibosh faults structre
+ * @param out       (out parameter) the new Kibosh faults structure
  *
- * @return          0 on sucess, or the negative error code on error.
+ * @return          0 on success, or the negative error code on error.
  */
 int faults_calloc(struct kibosh_faults **out);
 
@@ -137,7 +318,7 @@ char *kibosh_fault_base_unparse(struct kibosh_fault_base *fault);
 int kibosh_fault_base_check(struct kibosh_fault_base *fault, const char *path, const char *op);
 
 /**
- * Free the memory associated with a fault objectg.
+ * Free the memory associated with a fault object.
  *
  * @param fault     The fault object.
  */

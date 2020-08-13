@@ -126,6 +126,16 @@ int kibosh_fs_accessor_fd_release(struct kibosh_fs *fs, int fd);
  */
 int kibosh_fs_check_read_fault(struct kibosh_fs *fs, const char *path);
 
+/**
+ * Check if we should inject a write fault.
+ *
+ * @param fs        The kibosh_fs.
+ * @param path      The path being written to.
+ *
+ * @return          0 if we should not inject a fault; the error code otherwise.
+ */
+int kibosh_fs_check_write_fault(struct kibosh_fs *fs, const char *path);
+
 #endif
 
 // vim: ts=4:sw=4:tw=99:et
