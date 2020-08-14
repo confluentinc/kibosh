@@ -287,22 +287,4 @@ done_close_fd:
     return ret;
 }
 
-int kibosh_fs_check_read_fault(struct kibosh_fs *fs, const char *path)
-{
-    int ret;
-    pthread_mutex_lock(&fs->lock);
-    ret = faults_check(fs->faults, path, "read");
-    pthread_mutex_unlock(&fs->lock);
-    return ret;
-}
-
-int kibosh_fs_check_write_fault(struct kibosh_fs *fs, const char *path)
-{
-    int ret;
-    pthread_mutex_lock(&fs->lock);
-    ret = faults_check(fs->faults, path, "write");
-    pthread_mutex_unlock(&fs->lock);
-    return ret;
-}
-
 // vim: ts=4:sw=4:tw=99:et

@@ -117,7 +117,7 @@ static struct kibosh_fault_unreadable *kibosh_fault_unreadable_parse(json_value 
         INFO("%s: OOM\n", __func__);
         return NULL;
     }
-    snprintf(fault->base.type, KIBOSH_FAULT_TYPE_STR_LEN, "%s", KIBOSH_FAULT_TYPE_UNREADABLE);
+    fault->base.type = KIBOSH_FAULT_TYPE_UNREADABLE;
     fault->prefix = strdup(prefix_obj->u.string.ptr);
     if (!fault->prefix) {
         INFO("%s: OOM\n", __func__);
@@ -142,14 +142,14 @@ static char *kibosh_fault_unreadable_unparse(struct kibosh_fault_unreadable *fau
                     "\"prefix\":\"%s\", "
                     "\"suffix\":\"%s\", "
                     "\"code\":%d}",
-                    KIBOSH_FAULT_TYPE_UNREADABLE,
+                    KIBOSH_FAULT_TYPE_UNREADABLE_NAME,
                     fault->prefix,
                     fault->suffix,
                     fault->code);
 }
 
-static int kibosh_fault_unreadable_check(struct kibosh_fault_unreadable *fault, const char *path,
-                                         const char *op)
+static int kibosh_fault_unreadable_matches(struct kibosh_fault_unreadable *fault,
+                                           const char *path, const char *op)
 {
     if (strcmp(op, "read") != 0) {
         return 0;
@@ -161,7 +161,7 @@ static int kibosh_fault_unreadable_check(struct kibosh_fault_unreadable *fault, 
         strcmp(path+(strlen(path)-strlen(fault->suffix)), fault->suffix) != 0) {
         return 0;
     }
-    return fault->code;
+    return 1;
 }
 
 /**
@@ -200,7 +200,7 @@ static struct kibosh_fault_read_delay *kibosh_fault_read_delay_parse(json_value 
         INFO("%s: OOM\n", __func__);
         return NULL;
     }
-    snprintf(fault->base.type, KIBOSH_FAULT_TYPE_STR_LEN, "%s", KIBOSH_FAULT_TYPE_READ_DELAY);
+    fault->base.type = KIBOSH_FAULT_TYPE_READ_DELAY;
     fault->prefix = strdup(prefix_obj->u.string.ptr);
     if (!fault->prefix) {
         INFO("%s: OOM\n", __func__);
@@ -227,15 +227,15 @@ static char *kibosh_fault_read_delay_unparse(struct kibosh_fault_read_delay *fau
                     "\"suffix\":\"%s\", "
                     "\"delay_ms\":%"PRId32"d, "
                     "\"fraction\":%g}",
-                    KIBOSH_FAULT_TYPE_READ_DELAY,
+                    KIBOSH_FAULT_TYPE_READ_DELAY_NAME,
                     fault->prefix,
                     fault->suffix,
                     fault->delay_ms,
                     fault->fraction);
 }
 
-static int kibosh_fault_read_delay_check(struct kibosh_fault_read_delay *fault, const char *path,
-                                            const char *op)
+static int kibosh_fault_read_delay_matches(struct kibosh_fault_read_delay *fault,
+                                           const char *path, const char *op)
 {
     if (strcmp(op, "read") != 0) {
         return 0;
@@ -247,14 +247,15 @@ static int kibosh_fault_read_delay_check(struct kibosh_fault_read_delay *fault, 
         strcmp(path+(strlen(path)-strlen(fault->suffix)), fault->suffix) != 0) {
         return 0;
     }
-    // apply fraction
-    if (drand48() <= fault->fraction) {
-        INFO("[read_delay fault injected] {path=%s, prefix=%s, suffix=%s, fraction=%g, delay_ms=%d}\n",
-            path, fault->prefix, fault->suffix, fault->fraction, fault->delay_ms);
-        milli_sleep(fault->delay_ms);
-    }
-    return 0;
+    return (drand48() <= fault->fraction);
 }
+
+//static int kibosh_fault_read_delay_apply(struct kibosh_fault_read_delay *fault)
+//{
+//    INFO("[read_delay fault injected] {path=%s, prefix=%s, suffix=%s, fraction=%g, delay_ms=%d}\n",
+//            path, fault->prefix, fault->suffix, fault->fraction, fault->delay_ms);
+//    milli_sleep(fault->delay_ms);
+//}
 
 /**
  * kibosh_fault_unwritable
@@ -286,7 +287,7 @@ static struct kibosh_fault_unwritable *kibosh_fault_unwritable_parse(json_value 
         INFO("%s: OOM\n", __func__);
         return NULL;
     }
-    snprintf(fault->base.type, KIBOSH_FAULT_TYPE_STR_LEN, "%s", KIBOSH_FAULT_TYPE_UNWRITABLE);
+    fault->base.type = KIBOSH_FAULT_TYPE_UNWRITABLE;
     fault->prefix = strdup(prefix_obj->u.string.ptr);
     if (!fault->prefix) {
         INFO("%s: OOM\n", __func__);
@@ -311,14 +312,14 @@ static char *kibosh_fault_unwritable_unparse(struct kibosh_fault_unwritable *fau
                     "\"prefix\":\"%s\", "
                     "\"suffix\":\"%s\", "
                     "\"code\":%d}",
-                    KIBOSH_FAULT_TYPE_UNWRITABLE,
+                    KIBOSH_FAULT_TYPE_UNWRITABLE_NAME,
                     fault->prefix,
                     fault->suffix,
                     fault->code);
 }
 
-static int kibosh_fault_unwritable_check(struct kibosh_fault_unwritable *fault, const char *path,
-                                         const char *op)
+static int kibosh_fault_unwritable_matches(struct kibosh_fault_unwritable *fault,
+                                           const char *path, const char *op)
 {
     if (strcmp(op, "write") != 0) {
         return 0;
@@ -330,7 +331,7 @@ static int kibosh_fault_unwritable_check(struct kibosh_fault_unwritable *fault, 
         strcmp(path+(strlen(path)-strlen(fault->suffix)), fault->suffix) != 0) {
         return 0;
     }
-    return fault->code;
+    return 1;
 }
 
 /**
@@ -369,7 +370,7 @@ static struct kibosh_fault_write_delay *kibosh_fault_write_delay_parse(json_valu
         INFO("%s: OOM\n", __func__);
         return NULL;
     }
-    snprintf(fault->base.type, KIBOSH_FAULT_TYPE_STR_LEN, "%s", KIBOSH_FAULT_TYPE_WRITE_DELAY);
+    fault->base.type = KIBOSH_FAULT_TYPE_WRITE_DELAY;
     fault->prefix = strdup(prefix_obj->u.string.ptr);
     if (!fault->prefix) {
         INFO("%s: OOM\n", __func__);
@@ -396,15 +397,15 @@ static char *kibosh_fault_write_delay_unparse(struct kibosh_fault_write_delay *f
                     "\"suffix\":\"%s\", "
                     "\"delay_ms\":%"PRId32"d, "
                     "\"fraction\":%g}",
-                    KIBOSH_FAULT_TYPE_WRITE_DELAY,
+                    KIBOSH_FAULT_TYPE_WRITE_DELAY_NAME,
                     fault->prefix,
                     fault->suffix,
                     fault->delay_ms,
                     fault->fraction);
 }
 
-static int kibosh_fault_write_delay_check(struct kibosh_fault_write_delay *fault, const char *path,
-                                            const char *op)
+static int kibosh_fault_write_delay_matches(struct kibosh_fault_write_delay *fault,
+                                            const char *path, const char *op)
 {
     if (strcmp(op, "write") != 0) {
         return 0;
@@ -416,14 +417,15 @@ static int kibosh_fault_write_delay_check(struct kibosh_fault_write_delay *fault
         strcmp(path+(strlen(path)-strlen(fault->suffix)), fault->suffix) != 0) {
         return 0;
     }
-    // apply fraction
-    if (drand48() <= fault->fraction) {
-        INFO("[write_delay fault injected] {path=%s, prefix=%s, suffix=%s, fraction=%g, delay_ms=%d}\n",
-            path, fault->prefix, fault->suffix, fault->fraction, fault->delay_ms);
-        milli_sleep(fault->delay_ms);
-    }
-    return 0;
+    return (drand48() <= fault->fraction);
 }
+
+//static int kibosh_fault_write_delay_apply(struct kibosh_fault_read_delay *fault)
+//{
+//    INFO("[write_delay fault injected] {path=%s, prefix=%s, suffix=%s, fraction=%g, delay_ms=%d}\n",
+//        path, fault->prefix, fault->suffix, fault->fraction, fault->delay_ms);
+//    milli_sleep(fault->delay_ms);
+//}
 
 /**
  * kibosh_fault_read_corrupt
@@ -467,7 +469,7 @@ static struct kibosh_fault_read_corrupt *kibosh_fault_read_corrupt_parse(json_va
         INFO("%s: OOM\n", __func__);
         return NULL;
     }
-    snprintf(fault->base.type, KIBOSH_FAULT_TYPE_STR_LEN, "%s", KIBOSH_FAULT_TYPE_READ_CORRUPT);
+    fault->base.type = KIBOSH_FAULT_TYPE_READ_CORRUPT;
     fault->prefix = strdup(prefix_obj->u.string.ptr);
     if (!fault->prefix) {
         INFO("%s: OOM\n", __func__);
@@ -495,15 +497,15 @@ static char *kibosh_fault_read_corrupt_unparse(struct kibosh_fault_read_corrupt 
                     "\"suffix\":\"%s\", "
                     "\"mode\":%d, "
                     "\"fraction\":%g}",
-                    KIBOSH_FAULT_TYPE_READ_CORRUPT,
+                    KIBOSH_FAULT_TYPE_READ_CORRUPT_NAME,
                     fault->prefix,
                     fault->suffix,
                     fault->mode,
                     fault->fraction);
 }
 
-static int kibosh_fault_read_corrupt_check(struct kibosh_fault_read_corrupt *fault, const char *path,
-                                            const char *op)
+static int kibosh_fault_read_corrupt_matches(struct kibosh_fault_read_corrupt *fault,
+                                             const char *path, const char *op)
 {
     if (strcmp(op, "read") != 0) {
         return 0;
@@ -515,14 +517,22 @@ static int kibosh_fault_read_corrupt_check(struct kibosh_fault_read_corrupt *fau
         strcmp(path+(strlen(path)-strlen(fault->suffix)), fault->suffix) != 0) {
         return 0;
     }
-    if (fault->count > 0) {
-        fault->count--;
-    } else if (fault->count == 0) {
-        fault->mode = CORRUPT_DROP;
-        fault->fraction = 1.0;
-    }
-    return fault->mode;
+    return 1;
 }
+
+//static int kibosh_fault_read_corrupt_apply(struct kibosh_fault_read_corrupt *fault,
+//                                           const char *path, const char *op)
+//{
+//    ...
+//    if (fault->count > 0) {
+//        fault->count--;
+//    } else if (fault->count == 0) {
+//        fault->mode = CORRUPT_DROP;
+//        fault->fraction = 1.0;
+//        return 1;
+//    }
+//    return fault->mode;
+//}
 
 /**
  * kibosh_fault_write_corrupt
@@ -566,7 +576,7 @@ static struct kibosh_fault_write_corrupt *kibosh_fault_write_corrupt_parse(json_
         INFO("%s: OOM\n", __func__);
         return NULL;
     }
-    snprintf(fault->base.type, KIBOSH_FAULT_TYPE_STR_LEN, "%s", KIBOSH_FAULT_TYPE_WRITE_CORRUPT);
+    fault->base.type = KIBOSH_FAULT_TYPE_WRITE_CORRUPT;
     fault->prefix = strdup(prefix_obj->u.string.ptr);
     if (!fault->prefix) {
         INFO("%s: OOM\n", __func__);
@@ -594,15 +604,15 @@ static char *kibosh_fault_write_corrupt_unparse(struct kibosh_fault_write_corrup
                     "\"suffix\":\"%s\", "
                     "\"mode\":%d, "
                     "\"fraction\":%g}",
-                    KIBOSH_FAULT_TYPE_WRITE_CORRUPT,
+                    KIBOSH_FAULT_TYPE_WRITE_CORRUPT_NAME,
                     fault->prefix,
                     fault->suffix,
                     fault->mode,
                     fault->fraction);
 }
 
-static int kibosh_fault_write_corrupt_check(struct kibosh_fault_write_corrupt *fault, const char *path,
-                                            const char *op)
+static int kibosh_fault_write_corrupt_matches(struct kibosh_fault_write_corrupt *fault,
+                                              const char *path, const char *op)
 {
     if (strcmp(op, "write") != 0) {
         return 0;
@@ -614,14 +624,20 @@ static int kibosh_fault_write_corrupt_check(struct kibosh_fault_write_corrupt *f
         strcmp(path+(strlen(path)-strlen(fault->suffix)), fault->suffix) != 0) {
         return 0;
     }
-    if (fault->count > 0) {
-        fault->count--;
-    } else if (fault->count == 0) {
-        fault->mode = CORRUPT_DROP;
-        fault->fraction = 1.0;
-    }
-    return fault->mode;
+    return 1;
 }
+
+//static int kibosh_fault_write_corrupt_apply(struct kibosh_fault_write_corrupt *fault,
+//                                            const char *path, const char *op)
+//{
+//    if (fault->count > 0) {
+//        fault->count--;
+//    } else if (fault->count == 0) {
+//        fault->mode = CORRUPT_DROP;
+//        fault->fraction = 1.0;
+//    }
+//    return fault->mode;
+//}
 
 /**
  * kibosh_fault_base 
@@ -639,17 +655,17 @@ struct kibosh_fault_base *kibosh_fault_base_parse(json_value *obj)
         INFO("%s: \"type\" field was not a string.\n", __func__);
         return NULL;
     }
-    if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_UNREADABLE) == 0) {
+    if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_UNREADABLE_NAME) == 0) {
         return (struct kibosh_fault_base *)kibosh_fault_unreadable_parse(obj);
-    } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_READ_DELAY) == 0) {
+    } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_READ_DELAY_NAME) == 0) {
         return (struct kibosh_fault_base *)kibosh_fault_read_delay_parse(obj);
-    } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_WRITE_DELAY) == 0) {
+    } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_WRITE_DELAY_NAME) == 0) {
         return (struct kibosh_fault_base *)kibosh_fault_write_delay_parse(obj);
-    } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_UNWRITABLE) == 0) {
+    } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_UNWRITABLE_NAME) == 0) {
         return (struct kibosh_fault_base *)kibosh_fault_unwritable_parse(obj);
-    } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_READ_CORRUPT) == 0) {
+    } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_READ_CORRUPT_NAME) == 0) {
         return (struct kibosh_fault_base *)kibosh_fault_read_corrupt_parse(obj);
-    } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_WRITE_CORRUPT) == 0) {
+    } else if (strcmp(child->u.string.ptr, KIBOSH_FAULT_TYPE_WRITE_CORRUPT_NAME) == 0) {
         return (struct kibosh_fault_base *)kibosh_fault_write_corrupt_parse(obj);
     }
     INFO("%s: Unknown fault type \"%s\".\n", __func__, child->u.string.ptr);
@@ -658,56 +674,77 @@ struct kibosh_fault_base *kibosh_fault_base_parse(json_value *obj)
 
 char *kibosh_fault_base_unparse(struct kibosh_fault_base *fault)
 {
-    if (strcmp(fault->type, KIBOSH_FAULT_TYPE_UNREADABLE) == 0) {
-        return kibosh_fault_unreadable_unparse((struct kibosh_fault_unreadable*)fault);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_READ_DELAY) == 0) {
-        return kibosh_fault_read_delay_unparse((struct kibosh_fault_read_delay*)fault);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_WRITE_DELAY) == 0) {
-        return kibosh_fault_write_delay_unparse((struct kibosh_fault_write_delay*)fault);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_UNWRITABLE) == 0) {
-        return kibosh_fault_unwritable_unparse((struct kibosh_fault_unwritable*)fault);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_READ_CORRUPT) == 0) {
-        return kibosh_fault_read_corrupt_unparse((struct kibosh_fault_read_corrupt*)fault);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_WRITE_CORRUPT) == 0) {
-        return kibosh_fault_write_corrupt_unparse((struct kibosh_fault_write_corrupt*)fault);
+    switch (fault->type) {
+        case KIBOSH_FAULT_TYPE_UNREADABLE:
+            return kibosh_fault_unreadable_unparse(
+                    (struct kibosh_fault_unreadable*)fault);
+        case KIBOSH_FAULT_TYPE_READ_DELAY:
+            return kibosh_fault_read_delay_unparse(
+                    (struct kibosh_fault_read_delay*)fault);
+        case KIBOSH_FAULT_TYPE_WRITE_DELAY:
+            return kibosh_fault_write_delay_unparse(
+                    (struct kibosh_fault_write_delay*)fault);
+        case KIBOSH_FAULT_TYPE_UNWRITABLE:
+            return kibosh_fault_unwritable_unparse(
+                    (struct kibosh_fault_unwritable*)fault);
+        case KIBOSH_FAULT_TYPE_READ_CORRUPT:
+            return kibosh_fault_read_corrupt_unparse(
+                    (struct kibosh_fault_read_corrupt*)fault);
+        case KIBOSH_FAULT_TYPE_WRITE_CORRUPT:
+            return kibosh_fault_write_corrupt_unparse(
+                    (struct kibosh_fault_write_corrupt*)fault);
     }
     return NULL;
 }
 
-int kibosh_fault_base_check(struct kibosh_fault_base *fault, const char *path, const char *op)
+int kibosh_fault_matches(struct kibosh_fault_base *fault, const char *path, const char *op)
 {
-    if (strcmp(fault->type, KIBOSH_FAULT_TYPE_UNREADABLE) == 0) {
-        return kibosh_fault_unreadable_check((struct kibosh_fault_unreadable*)fault, path, op);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_READ_DELAY) == 0) {
-        return kibosh_fault_read_delay_check((struct kibosh_fault_read_delay*)fault, path, op);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_WRITE_DELAY) == 0) {
-        return kibosh_fault_write_delay_check((struct kibosh_fault_write_delay*)fault, path, op);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_UNWRITABLE) == 0) {
-        return kibosh_fault_unwritable_check((struct kibosh_fault_unwritable*)fault, path, op);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_READ_CORRUPT) == 0) {
-        return kibosh_fault_read_corrupt_check((struct kibosh_fault_read_corrupt*)fault, path, op);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_WRITE_CORRUPT) == 0) {
-        return kibosh_fault_write_corrupt_check((struct kibosh_fault_write_corrupt*)fault, path, op);
+    switch (fault->type) {
+        case KIBOSH_FAULT_TYPE_UNREADABLE:
+            return kibosh_fault_unreadable_matches(
+                    (struct kibosh_fault_unreadable*)fault, path, op);
+        case KIBOSH_FAULT_TYPE_READ_DELAY:
+            return kibosh_fault_read_delay_matches(
+                        (struct kibosh_fault_read_delay*)fault, path, op);
+        case KIBOSH_FAULT_TYPE_WRITE_DELAY:
+            return kibosh_fault_write_delay_matches(
+                        (struct kibosh_fault_write_delay*)fault, path, op);
+        case KIBOSH_FAULT_TYPE_UNWRITABLE:
+            return kibosh_fault_unwritable_matches(
+                        (struct kibosh_fault_unwritable*)fault, path, op);
+        case KIBOSH_FAULT_TYPE_READ_CORRUPT:
+            return kibosh_fault_read_corrupt_matches(
+                        (struct kibosh_fault_read_corrupt*)fault, path, op);
+        case KIBOSH_FAULT_TYPE_WRITE_CORRUPT:
+            return kibosh_fault_write_corrupt_matches(
+                        (struct kibosh_fault_write_corrupt*)fault, path, op);
     }
-    return -ENOSYS;
+    return 0;
 }
 
 void kibosh_fault_base_free(struct kibosh_fault_base *fault)
 {
     if (!fault)
         return;
-    if (strcmp(fault->type, KIBOSH_FAULT_TYPE_UNREADABLE) == 0) {
-        kibosh_fault_unreadable_free((struct kibosh_fault_unreadable*)fault);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_READ_DELAY) == 0) {
-        kibosh_fault_read_delay_free((struct kibosh_fault_read_delay*)fault);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_WRITE_DELAY) == 0) {
-        kibosh_fault_write_delay_free((struct kibosh_fault_write_delay*)fault);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_UNWRITABLE) == 0) {
-        kibosh_fault_unwritable_free((struct kibosh_fault_unwritable*)fault);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_READ_CORRUPT) == 0) {
-        kibosh_fault_read_corrupt_free((struct kibosh_fault_read_corrupt*)fault);
-    } else if (strcmp(fault->type, KIBOSH_FAULT_TYPE_WRITE_CORRUPT) == 0) {
-        kibosh_fault_write_corrupt_free((struct kibosh_fault_write_corrupt*)fault);
+    switch (fault->type) {
+        case KIBOSH_FAULT_TYPE_UNREADABLE:
+            kibosh_fault_unreadable_free((struct kibosh_fault_unreadable*)fault);
+            break;
+        case KIBOSH_FAULT_TYPE_READ_DELAY:
+            kibosh_fault_read_delay_free((struct kibosh_fault_read_delay*)fault);
+            break;
+        case KIBOSH_FAULT_TYPE_WRITE_DELAY:
+            kibosh_fault_write_delay_free((struct kibosh_fault_write_delay*)fault);
+            break;
+        case KIBOSH_FAULT_TYPE_UNWRITABLE:
+            kibosh_fault_unwritable_free((struct kibosh_fault_unwritable*)fault);
+            break;
+        case KIBOSH_FAULT_TYPE_READ_CORRUPT:
+            kibosh_fault_read_corrupt_free((struct kibosh_fault_read_corrupt*)fault);
+            break;
+        case KIBOSH_FAULT_TYPE_WRITE_CORRUPT:
+            kibosh_fault_write_corrupt_free((struct kibosh_fault_write_corrupt*)fault);
+            break;
     }
 }
 
@@ -725,6 +762,26 @@ int faults_calloc(struct kibosh_faults **out)
     }
     *out = faults;
     return 0;
+}
+
+const char *kibosh_fault_type_name(struct kibosh_fault_base *fault)
+{
+    switch (fault->type) {
+        case KIBOSH_FAULT_TYPE_UNREADABLE:
+            return KIBOSH_FAULT_TYPE_UNREADABLE_NAME;
+        case KIBOSH_FAULT_TYPE_READ_DELAY:
+            return KIBOSH_FAULT_TYPE_READ_DELAY_NAME;
+        case KIBOSH_FAULT_TYPE_UNWRITABLE:
+            return KIBOSH_FAULT_TYPE_UNWRITABLE_NAME;
+        case KIBOSH_FAULT_TYPE_WRITE_DELAY:
+            return KIBOSH_FAULT_TYPE_WRITE_DELAY_NAME;
+        case KIBOSH_FAULT_TYPE_READ_CORRUPT:
+            return KIBOSH_FAULT_TYPE_READ_CORRUPT_NAME;
+        case KIBOSH_FAULT_TYPE_WRITE_CORRUPT:
+            return KIBOSH_FAULT_TYPE_WRITE_CORRUPT_NAME;
+        default:
+            return "(unknown)";
+    }
 }
 
 /**
@@ -753,7 +810,8 @@ static int fault_array_parse(json_value *arr, struct kibosh_faults **out)
         goto done;
     }
     for (i = 0; i < num_faults; i++) {
-        faults->list[i] = (struct kibosh_fault_base*)kibosh_fault_base_parse(arr->u.array.values[i]);
+        faults->list[i] = (struct kibosh_fault_base*)
+                kibosh_fault_base_parse(arr->u.array.values[i]);
         if (!faults->list[i]) {
             goto done;
         }
@@ -786,7 +844,8 @@ int faults_parse(const char *str, struct kibosh_faults **out)
 
     root = json_parse_ex(&settings, str, strlen(str), error);
     if (!root) {
-        INFO("%s: failed to parse input string of length %zd: %s\n", __func__, strlen(str), error);
+        INFO("%s: failed to parse input string of length %zd: %s\n", __func__,
+             strlen(str), error);
         goto done;
     }
     faults = get_child(root, "faults");
@@ -865,23 +924,18 @@ done:
     return json;
 }
 
-int faults_check(struct kibosh_faults *faults, const char *path, const char *op)
+struct kibosh_fault_base *find_first_fault(struct kibosh_faults *faults,
+                                      const char *path, const char *op)
 {
     struct kibosh_fault_base **iter;
 
-    int ret = 0;
-
     for (iter = faults->list; *iter; iter++) {
-        int err_code = kibosh_fault_base_check(*iter, path, op);
-        if (err_code) {
-            // get the smallest err_codes
-            // i.e. when unreadable and read_corrupt faults both present, we want to execute unreadable
-            if (!ret || err_code < ret) {
-                ret = err_code;
-            }
+        struct kibosh_fault_base *fault = *iter;
+        if (kibosh_fault_matches(fault, path, op)) {
+            return fault;
         }
     }
-    return ret;
+    return NULL;
 }
 
 void faults_free(struct kibosh_faults *faults)

@@ -30,7 +30,7 @@ static struct kibosh_fault_unreadable *kibosh_fault_unreadable_alloc(int code,
 {
     struct kibosh_fault_unreadable *fault;
     fault = calloc(1, sizeof(*fault));
-    snprintf(fault->base.type, KIBOSH_FAULT_TYPE_STR_LEN, "%s", KIBOSH_FAULT_TYPE_UNREADABLE);
+    fault->base.type = KIBOSH_FAULT_TYPE_UNREADABLE;
     fault->prefix = strdup(prefix);
     if (!fault->prefix)
         abort();
@@ -118,10 +118,10 @@ static int test_fault_parse(void)
     struct kibosh_faults *faults = NULL;
     EXPECT_INT_ZERO(faults_parse(str, &faults));
     EXPECT_NONNULL(faults);
-    EXPECT_STR_EQ(KIBOSH_FAULT_TYPE_UNREADABLE, faults->list[0]->type);
+    EXPECT_INT_EQ(KIBOSH_FAULT_TYPE_UNREADABLE, faults->list[0]->type);
     unreadable = (struct kibosh_fault_unreadable*)faults->list[0];
     EXPECT_INT_EQ(1, unreadable->code);
-    EXPECT_STR_EQ(KIBOSH_FAULT_TYPE_UNREADABLE, faults->list[1]->type);
+    EXPECT_INT_EQ(KIBOSH_FAULT_TYPE_UNREADABLE, faults->list[1]->type);
     unreadable = (struct kibosh_fault_unreadable*)faults->list[1];
     EXPECT_INT_EQ(2, unreadable->code);
     faults_free(faults);

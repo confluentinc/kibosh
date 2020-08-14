@@ -20,9 +20,16 @@
 #include "json.h"
 
 /**
- * The maximum length of a Kibosh fault type string.
+ * The type of kibosh fault.
  */
-#define KIBOSH_FAULT_TYPE_STR_LEN 32
+enum kibosh_fault_type {
+    KIBOSH_FAULT_TYPE_UNREADABLE = 1,
+    KIBOSH_FAULT_TYPE_READ_DELAY = 2,
+    KIBOSH_FAULT_TYPE_UNWRITABLE = 3,
+    KIBOSH_FAULT_TYPE_WRITE_DELAY = 4,
+    KIBOSH_FAULT_TYPE_READ_CORRUPT = 5,
+    KIBOSH_FAULT_TYPE_WRITE_CORRUPT = 6,
+};
 
 /**
  * Constant flags for byte corruption modes.
@@ -45,38 +52,38 @@ struct kibosh_fault_base {
     /**
      * The type of fault.
      */
-    char type[KIBOSH_FAULT_TYPE_STR_LEN];
+    enum kibosh_fault_type type;
 };
 
 /**
- * The type of kibosh_fault_unreadable.
+ * The name of the kibosh_fault_unreadable type.
  */
-#define KIBOSH_FAULT_TYPE_UNREADABLE "unreadable"
+#define KIBOSH_FAULT_TYPE_UNREADABLE_NAME "unreadable"
 
 /**
- * The type of kibosh_fault_read_delay.
+ * The name of the kibosh_fault_read_delay type.
  */
-#define KIBOSH_FAULT_TYPE_READ_DELAY "read_delay"
+#define KIBOSH_FAULT_TYPE_READ_DELAY_NAME "read_delay"
 
 /**
- * The type of kibosh_fault_unwritable.
+ * The name of the kibosh_fault_unwritable type.
  */
-#define KIBOSH_FAULT_TYPE_UNWRITABLE "unwritable"
+#define KIBOSH_FAULT_TYPE_UNWRITABLE_NAME "unwritable"
 
 /**
- * The type of kibosh_fault_write_delay.
+ * The name of the kibosh_fault_write_delay type.
  */
-#define KIBOSH_FAULT_TYPE_WRITE_DELAY "write_delay"
+#define KIBOSH_FAULT_TYPE_WRITE_DELAY_NAME "write_delay"
 
 /**
- * The type of kibosh_fault_read_corrupt.
+ * The name of the kibosh_fault_read_corrupt type.
  */
-#define KIBOSH_FAULT_TYPE_READ_CORRUPT "read_corrupt"
+#define KIBOSH_FAULT_TYPE_READ_CORRUPT_NAME "read_corrupt"
 
 /**
- * The type of kibosh_fault_write_corrupt.
+ * The name of the kibosh_fault_write_corrupt type.
  */
-#define KIBOSH_FAULT_TYPE_WRITE_CORRUPT "write_corrupt"
+#define KIBOSH_FAULT_TYPE_WRITE_CORRUPT_NAME "write_corrupt"
 
 /**
  * The class for Kibosh faults that make files unreadable.
@@ -277,6 +284,13 @@ struct kibosh_faults {
 int faults_calloc(struct kibosh_faults **out);
 
 /**
+ * Return the name of the fault type.
+ *
+ * @return          A constant string which is the name of the fault type.
+ */
+const char *kibosh_fault_type_name(struct kibosh_fault_base *fault);
+
+/**
  * Parse a JSON string as a fault object.
  *
  * @param str       The string to parse.
@@ -297,15 +311,13 @@ char *kibosh_fault_base_unparse(struct kibosh_fault_base *fault);
 /**
  * Check whether a given kibosh FS operation should trigger this fault.
  *
- * @param fault     The fault structure.
+ * @param fault     The fault.
  * @param path      The path.
  * @param op        The operation.
  *
- * @return          0 if no fault should be injected; an error code greater than 0 if we should
- *                  inject the corresponding fault. (Note: Linux FUSE requires negative return
- *                  codes.)
+ * @return          1 if the fault should not be injected; 0 otherwise.
  */
-int kibosh_fault_base_check(struct kibosh_fault_base *fault, const char *path, const char *op);
+int kibosh_fault_matches(struct kibosh_fault_base *fault, const char *path, const char *op);
 
 /**
  * Free the memory associated with a fault object.
@@ -334,17 +346,16 @@ int faults_parse(const char *str, struct kibosh_faults **out);
 char *faults_unparse(const struct kibosh_faults *faults);
 
 /**
- * Check whether a given kibosh FS operation should trigger one of the configured faults.
+ * Find the first fault that applies to the given path and operation.
  *
  * @param faults    The faults structure.
  * @param path      The path.
  * @param op        The operation.
  *
- * @return          0 if no fault should be injected; an error code greater than 0 if we should
- *                  inject the corresponding fault. (Note: Linux FUSE requires negative return
- *                  codes.)
+ * @return          NULL if no applicable fault could be found; the fault otherwise.
  */
-int faults_check(struct kibosh_faults *faults, const char *path, const char *op);
+struct kibosh_fault_base *find_first_fault(struct kibosh_faults *faults,
+                                           const char *path, const char *op);
 
 /**
  * Free a dynamically allocated kibosh_faults structure.

@@ -165,11 +165,11 @@ add_executable(time_unit
 target_link_libraries(time_unit utest)
 add_utest(time_unit)
 
-add_custom_target(
-    copy_test_script ALL
-    DEPENDS systest.sh
-    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/systest.sh" "${CMAKE_BINARY_DIR}/systest.sh"
-)
+#add_custom_target(
+#    copy_test_script ALL
+#    DEPENDS systest.sh
+#    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/systest.sh" "${CMAKE_BINARY_DIR}/systest.sh"
+#)
 
 find_program (BASH_PROGRAM bash)
 if (BASH_PROGRAM)
