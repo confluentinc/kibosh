@@ -27,12 +27,12 @@
 
 #define KIBOSH_CONF_OPT(t, p, v) { t, offsetof(struct kibosh_conf, p), v }
 
-struct fuse_opt kibosh_command_line_options[] = {
+static struct fuse_opt kibosh_command_line_options[] = {
+     KIBOSH_CONF_OPT("--random-seed %d", random_seed, 0),
      KIBOSH_CONF_OPT("--pidfile %s", pidfile_path, 0),
      KIBOSH_CONF_OPT("--log %s", log_path, 0),
      KIBOSH_CONF_OPT("--target %s", target_path, 0),
      KIBOSH_CONF_OPT("--control-mode %o", control_mode, 0600),
-     KIBOSH_CONF_OPT("--random-seed %d", random_seed, 0),
      KIBOSH_CONF_OPT("-v", verbose, 1),
      KIBOSH_CONF_OPT("--verbose", verbose, 1),
      FUSE_OPT_KEY("-h", KIBOSH_CLI_GENERAL_HELP_KEY),
@@ -40,6 +40,13 @@ struct fuse_opt kibosh_command_line_options[] = {
      FUSE_OPT_KEY("--fuse-help", KIBOSH_CLI_FUSE_HELP_KEY),
      FUSE_OPT_END
 };
+
+struct fuse_opt* get_kibosh_command_line_options(void)
+{
+    // Set the default seed to the current time.
+    kibosh_command_line_options[0].value = time(NULL);
+    return kibosh_command_line_options;
+}
 
 struct kibosh_conf *kibosh_conf_alloc(void)
 {
@@ -119,7 +126,7 @@ char *kibosh_conf_to_str(const struct kibosh_conf *conf)
         "log_path=%s%s%s, "
         "target_path=%s%s%s, "
         "control_mode=0%03o, "
-        "random_seed=%d, "
+        "random_seed=%ld, "
         "verbose=%d"
         "}",
         STR_PARAMS(conf->pidfile_path),

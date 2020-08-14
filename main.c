@@ -20,6 +20,7 @@
 #include "log.h"
 #include "meta.h"
 #include "signal.h"
+#include "time.h"
 #include "util.h"
 
 #include <ctype.h>
@@ -162,7 +163,7 @@ int main(int argc, char *argv[])
         goto done;
     }
 
-    if (fuse_opt_parse(&args, conf, kibosh_command_line_options, 
+    if (fuse_opt_parse(&args, conf, get_kibosh_command_line_options(),
                         kibosh_process_option) < 0) {
         INFO("kibosh_main: fuse_opt_parse failed.\n");
         goto done;
@@ -227,14 +228,8 @@ int main(int argc, char *argv[])
     }
 
     /* Reset random seed for the process. */
-    if (conf->random_seed) {
-        srand(conf->random_seed);
-        INFO("kibosh_main: random seed is set to %d.\n", conf->random_seed);
-    } else {
-        int s = (int) round(time(0));
-        srand(s);
-        INFO("kibosh_main: random seed is set to %d.\n", s);
-    }
+    srand48(conf->random_seed);
+    INFO("kibosh_main: random seed is set to %ld.\n", conf->random_seed);
 
     /*
      * Start a process to clear page cache every 1 second.

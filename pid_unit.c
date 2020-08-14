@@ -29,7 +29,7 @@ static int test_write_pidfile(void)
     char const *tmp = getenv("TMPDIR");
     if (!tmp)
         tmp = "/dev/shm";
-    snprintf(path, sizeof(path), "%s/pid_file.%lld.%d", tmp, (long long)getpid(), rand());
+    snprintf(path, sizeof(path), "%s/pid_file.%lld.%ld", tmp, (long long)getpid(), lrand48());
     EXPECT_INT_ZERO(write_pidfile(path));
     memset(buf, 0, sizeof(buf));
     EXPECT_INT_ZERO(read_string_from_file(path, buf, sizeof(buf)));

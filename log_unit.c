@@ -72,7 +72,7 @@ static int test_emit_shutdown_message(void)
 
     if (!tmp)
         tmp = "/dev/shm";
-    snprintf(path, sizeof(path), "%s/log_path.%lld.%d", tmp, (long long)getpid(), rand());
+    snprintf(path, sizeof(path), "%s/log_path.%lld.%ld", tmp, (long long)getpid(), lrand48());
     fp = fopen(path, "w");
     EXPECT_NONNULL(fp);
     kibosh_log_init(fp, 0);

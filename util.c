@@ -291,7 +291,7 @@ int memfd_create(const char *name, int mode)
     // a temporary file in /dev/shm, and then immediately unlinking it.
     int fd;
     char *path = dynprintf("/dev/shm/%s.temp.%lld.%ld.%ld.%ld",
-	name, (long long) time(NULL), (long)random(), (long)random(), (long)random());
+	name, (long long) time(NULL), (long)lrand48(), (long)lrand48(), (long)lrand48());
     if (!path) {
         return -ENOMEM;
     }
@@ -305,11 +305,6 @@ int memfd_create(const char *name, int mode)
     free(path);
     return fd;
 #endif
-}
-
-double random_fraction()
-{
-    return ((double)rand()/(double)RAND_MAX);
 }
 
 // vim: ts=4:sw=4:tw=99:et

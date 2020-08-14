@@ -49,7 +49,7 @@ struct kibosh_conf {
     /**
      * Seed for random functions.
      */
-    int random_seed;
+    long int random_seed;
 };
 
 enum kibosh_option_ty {
@@ -58,11 +58,15 @@ enum kibosh_option_ty {
 };
 
 /**
- * The command-line options accepted by Kibosh.
+ * Get an array of command-line options accepted by Kibosh.  The array is
+ * terminated by FUSE_OPT_END, as expected by the FUSE routines.  These
+ * options are meant to be used in addition to the standard FUSE
+ * command-line options.
  *
- * These are in addition to the standard FUSE command-line options.
+ * @return              A reference to statically allocated option data.
+ *                      Do not call this function from multiple threads.
  */
-extern struct fuse_opt kibosh_command_line_options[];
+struct fuse_opt* get_kibosh_command_line_options();
 
 /**
  * Allocate a new kibosh_conf object.

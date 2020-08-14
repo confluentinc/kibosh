@@ -257,28 +257,25 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                 switch(fault) {
                     case CORRUPT_RAND:
                         for (i=0; i < ret; i++) {
-                            if (random_fraction() <= fraction) {
-                                memset(buf+i, (int) round(random_fraction() * 255.0), 1);
+                            if (drand48() <= fraction) {
+                                buf[i] = lrand48() & 0xff;
                             }
                         }
                         break;
 
                     case CORRUPT_ZERO:
                         for (i=0; i < ret; i++) {
-                            if (random_fraction() <= fraction) {
-                                memset(buf+i, 0, 1);
+                            if (drand48() <= fraction) {
+                                buf[i] = lrand48() & 0xff;
                             }
                         }
                         break;
 
                     case CORRUPT_RAND_SEQ: ;
                         int num_bytes = ret - pos;
-                        char *random_buf = malloc(num_bytes);
-                        for (i=0; i < num_bytes; i++) {
-                            random_buf[i] = (int) round(random_fraction() * 255.0);
+                        for (i = 0; i < num_bytes; i++) {
+                            buf[pos + i] = lrand48() & 0xff;
                         }
-                        memcpy(buf+pos, random_buf, num_bytes);
-                        free(random_buf);
                         break;
 
                     case CORRUPT_ZERO_SEQ:
@@ -357,6 +354,7 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
     uint32_t uid UNUSED;
     struct kibosh_file *file = (struct kibosh_file*)(uintptr_t)info->fh;
     struct kibosh_fs *fs = fuse_get_context()->private_data;
+    char *mutable_buf = (char*) buf;
 
     if (file->type == KIBOSH_FILE_TYPE_NORMAL) {
         fault = kibosh_fs_check_write_fault(fs, file->path);
@@ -382,32 +380,29 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
             switch(fault) {
                 case CORRUPT_RAND:
                     for (i=0; i < buf_size; ++i) {
-                        if (random_fraction() <= fraction) {
-                            memset(buf+i, (int) round(random_fraction() * 255.0), 1);
+                        if (drand48() <= fraction) {
+                            mutable_buf[i] = lrand48() & 0xff;
                         }
                     }
                     break;
 
                 case CORRUPT_ZERO:
                     for (i=0; i < buf_size; ++i) {
-                        if (random_fraction() <= fraction) {
-                            memset(buf+i, 0, 1);
+                        if (drand48() <= fraction) {
+                            mutable_buf[i] = 0;
                         }
                     }
                     break;
 
                 case CORRUPT_RAND_SEQ: ;
                     int num_bytes = buf_size - pos;
-                    char *random_buf = malloc(num_bytes);
-                    for (i=0; i < num_bytes; i++) {
-                        random_buf[i] = (int) round(random_fraction() * 255.0);
+                    for (i = 0; i < num_bytes; i++) {
+                        mutable_buf[pos + i] = lrand48() & 0xff;
                     }
-                    memcpy(buf+pos, random_buf, num_bytes);
-                    free(random_buf);
                     break;
 
                 case CORRUPT_ZERO_SEQ:
-                    memset(buf+pos, 0, buf_size - pos);
+                    memset(mutable_buf+pos, 0, buf_size - pos);
                     break;
 
                 case CORRUPT_DROP:

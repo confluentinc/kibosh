@@ -17,6 +17,7 @@
 #include "fault.h"
 #include "json.h"
 #include "log.h"
+#include "time.h"
 #include "util.h"
 
 #include <errno.h>
@@ -247,7 +248,7 @@ static int kibosh_fault_read_delay_check(struct kibosh_fault_read_delay *fault, 
         return 0;
     }
     // apply fraction
-    if (random_fraction() <= fault->fraction) {
+    if (drand48() <= fault->fraction) {
         INFO("[read_delay fault injected] {path=%s, prefix=%s, suffix=%s, fraction=%g, delay_ms=%d}\n",
             path, fault->prefix, fault->suffix, fault->fraction, fault->delay_ms);
         milli_sleep(fault->delay_ms);
@@ -416,7 +417,7 @@ static int kibosh_fault_write_delay_check(struct kibosh_fault_write_delay *fault
         return 0;
     }
     // apply fraction
-    if (random_fraction() <= fault->fraction) {
+    if (drand48() <= fault->fraction) {
         INFO("[write_delay fault injected] {path=%s, prefix=%s, suffix=%s, fraction=%g, delay_ms=%d}\n",
             path, fault->prefix, fault->suffix, fault->fraction, fault->delay_ms);
         milli_sleep(fault->delay_ms);
