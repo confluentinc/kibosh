@@ -30,9 +30,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-/**
- * fault free functions
- */
+/////
+///// kibosh_fault_unreadable
+/////
 static void kibosh_fault_unreadable_free(struct kibosh_fault_unreadable *fault)
 {
     if (fault) {
@@ -42,54 +42,6 @@ static void kibosh_fault_unreadable_free(struct kibosh_fault_unreadable *fault)
     }
 }
 
-static void kibosh_fault_read_delay_free(struct kibosh_fault_read_delay *fault)
-{
-    if (fault) {
-        free(fault->prefix);
-        free(fault->suffix);
-        free(fault);
-    }
-}
-
-static void kibosh_fault_unwritable_free(struct kibosh_fault_unwritable *fault)
-{
-    if (fault) {
-        free(fault->prefix);
-        free(fault->suffix);
-        free(fault);
-    }
-}
-
-static void kibosh_fault_write_delay_free(struct kibosh_fault_write_delay *fault)
-{
-    if (fault) {
-        free(fault->prefix);
-        free(fault->suffix);
-        free(fault);
-    }
-}
-
-static void kibosh_fault_read_corrupt_free(struct kibosh_fault_read_corrupt *fault)
-{
-    if (fault) {
-        free(fault->prefix);
-        free(fault->suffix);
-        free(fault);
-    }
-}
-
-static void kibosh_fault_write_corrupt_free(struct kibosh_fault_write_corrupt *fault)
-{
-    if (fault) {
-        free(fault->prefix);
-        free(fault->suffix);
-        free(fault);
-    }
-}
-
-/**
- * kibosh_fault_unreadable 
- */
 static struct kibosh_fault_unreadable *kibosh_fault_unreadable_parse(json_value *obj)
 {
     struct kibosh_fault_unreadable *fault = NULL;
@@ -164,9 +116,25 @@ static int kibosh_fault_unreadable_matches(struct kibosh_fault_unreadable *fault
     return 1;
 }
 
-/**
- * kibosh_fault_read_delay
- */
+static int kibosh_fault_unreadable_apply(struct kibosh_fault_unreadable *fault,
+                                         uint32_t *delay_ms)
+{
+    *delay_ms = 0;
+    return fault->code < 0 ? fault->code : -fault->code;
+}
+
+/////
+///// kibosh_fault_read_delay
+/////
+static void kibosh_fault_read_delay_free(struct kibosh_fault_read_delay *fault)
+{
+    if (fault) {
+        free(fault->prefix);
+        free(fault->suffix);
+        free(fault);
+    }
+}
+
 static struct kibosh_fault_read_delay *kibosh_fault_read_delay_parse(json_value *obj)
 {
     struct kibosh_fault_read_delay *fault = NULL;
@@ -250,16 +218,24 @@ static int kibosh_fault_read_delay_matches(struct kibosh_fault_read_delay *fault
     return (drand48() <= fault->fraction);
 }
 
-//static int kibosh_fault_read_delay_apply(struct kibosh_fault_read_delay *fault)
-//{
-//    INFO("[read_delay fault injected] {path=%s, prefix=%s, suffix=%s, fraction=%g, delay_ms=%d}\n",
-//            path, fault->prefix, fault->suffix, fault->fraction, fault->delay_ms);
-//    milli_sleep(fault->delay_ms);
-//}
+static void kibosh_fault_read_delay_apply(struct kibosh_fault_read_delay *fault,
+                                         uint32_t *delay_ms)
+{
+    *delay_ms = fault->delay_ms;
+}
 
-/**
- * kibosh_fault_unwritable
- */
+/////
+///// kibosh_fault_unwritable
+/////
+static void kibosh_fault_unwritable_free(struct kibosh_fault_unwritable *fault)
+{
+    if (fault) {
+        free(fault->prefix);
+        free(fault->suffix);
+        free(fault);
+    }
+}
+
 static struct kibosh_fault_unwritable *kibosh_fault_unwritable_parse(json_value *obj)
 {
     struct kibosh_fault_unwritable *fault = NULL;
@@ -334,9 +310,26 @@ static int kibosh_fault_unwritable_matches(struct kibosh_fault_unwritable *fault
     return 1;
 }
 
-/**
- * kibosh_fault_write_delay
- */
+static int kibosh_fault_unwritable_apply(struct kibosh_fault_unwritable *fault,
+                                         char **dyanmic_buf, uint32_t *delay_ms)
+{
+    *dyanmic_buf = NULL;
+    *delay_ms = 0;
+    return (fault->code < 0) ? fault->code : -fault->code;
+}
+
+/////
+///// kibosh_fault_write_delay
+/////
+static void kibosh_fault_write_delay_free(struct kibosh_fault_write_delay *fault)
+{
+    if (fault) {
+        free(fault->prefix);
+        free(fault->suffix);
+        free(fault);
+    }
+}
+
 static struct kibosh_fault_write_delay *kibosh_fault_write_delay_parse(json_value *obj)
 {
     struct kibosh_fault_write_delay *fault = NULL;
@@ -420,16 +413,26 @@ static int kibosh_fault_write_delay_matches(struct kibosh_fault_write_delay *fau
     return (drand48() <= fault->fraction);
 }
 
-//static int kibosh_fault_write_delay_apply(struct kibosh_fault_read_delay *fault)
-//{
-//    INFO("[write_delay fault injected] {path=%s, prefix=%s, suffix=%s, fraction=%g, delay_ms=%d}\n",
-//        path, fault->prefix, fault->suffix, fault->fraction, fault->delay_ms);
-//    milli_sleep(fault->delay_ms);
-//}
+static int kibosh_fault_write_delay_apply(struct kibosh_fault_write_delay *fault,
+                                          char **dyanmic_buf, uint32_t *delay_ms, int size)
+{
+    *dyanmic_buf = NULL;
+    *delay_ms = fault->delay_ms;
+    return size;
+}
 
-/**
- * kibosh_fault_read_corrupt
- */
+/////
+///// kibosh_fault_read_corrupt
+/////
+static void kibosh_fault_read_corrupt_free(struct kibosh_fault_read_corrupt *fault)
+{
+    if (fault) {
+        free(fault->prefix);
+        free(fault->suffix);
+        free(fault);
+    }
+}
+
 static struct kibosh_fault_read_corrupt *kibosh_fault_read_corrupt_parse(json_value *obj)
 {
     struct kibosh_fault_read_corrupt *fault = NULL;
@@ -520,23 +523,33 @@ static int kibosh_fault_read_corrupt_matches(struct kibosh_fault_read_corrupt *f
     return 1;
 }
 
-//static int kibosh_fault_read_corrupt_apply(struct kibosh_fault_read_corrupt *fault,
-//                                           const char *path, const char *op)
-//{
-//    ...
-//    if (fault->count > 0) {
-//        fault->count--;
-//    } else if (fault->count == 0) {
-//        fault->mode = CORRUPT_DROP;
-//        fault->fraction = 1.0;
-//        return 1;
-//    }
-//    return fault->mode;
-//}
+static int kibosh_fault_read_corrupt_apply(struct kibosh_fault_read_corrupt *fault,
+                                           char *buf, int nread, uint32_t *delay_ms)
+{
+    *delay_ms = 0;
+    // If count > 0, then we will transition to CORRUPT_DROP after 'count' tries.
+    // If count is negative, then it is ignored.
+    if (fault->count > 0) {
+        fault->count--;
+    } else if (fault->count == 0) {
+        fault->mode = CORRUPT_DROP;
+        fault->fraction = 1.0;
+    }
+    return corrupt_buffer(buf, nread, fault->mode, fault->fraction);
+}
 
-/**
- * kibosh_fault_write_corrupt
- */
+/////
+///// kibosh_fault_write_corrupt
+/////
+static void kibosh_fault_write_corrupt_free(struct kibosh_fault_write_corrupt *fault)
+{
+    if (fault) {
+        free(fault->prefix);
+        free(fault->suffix);
+        free(fault);
+    }
+}
+
 static struct kibosh_fault_write_corrupt *kibosh_fault_write_corrupt_parse(json_value *obj)
 {
     struct kibosh_fault_write_corrupt *fault = NULL;
@@ -627,21 +640,37 @@ static int kibosh_fault_write_corrupt_matches(struct kibosh_fault_write_corrupt 
     return 1;
 }
 
-//static int kibosh_fault_write_corrupt_apply(struct kibosh_fault_write_corrupt *fault,
-//                                            const char *path, const char *op)
-//{
-//    if (fault->count > 0) {
-//        fault->count--;
-//    } else if (fault->count == 0) {
-//        fault->mode = CORRUPT_DROP;
-//        fault->fraction = 1.0;
-//    }
-//    return fault->mode;
-//}
+static int kibosh_fault_write_corrupt_apply(struct kibosh_fault_write_corrupt *fault,
+                    const char **buf, char **dynamic_buf, uint32_t *delay_ms, int size)
+{
+    char *dbuf;
 
-/**
- * kibosh_fault_base 
- */
+    *delay_ms = 0;
+    // If count > 0, then we will transition to CORRUPT_DROP after 'count' tries.
+    // If count is negative, then it is ignored.
+    if (fault->count > 0) {
+        fault->count--;
+    } else if (fault->count == 0) {
+        fault->mode = CORRUPT_DROP;
+        fault->fraction = 1.0;
+    }
+    if (fault->mode == CORRUPT_DROP) {
+        *dynamic_buf = 0;
+        return drand48() * size;
+    }
+    dbuf = malloc(size);
+    if (!dbuf) {
+        return -ENOMEM;
+    }
+    memcpy(dbuf, *buf, size);
+    *buf = dbuf;
+    *dynamic_buf = dbuf;
+    return corrupt_buffer(dbuf, size, fault->mode, fault->fraction);
+}
+
+/////
+///// kibosh_fault_base 
+/////
 struct kibosh_fault_base *kibosh_fault_base_parse(json_value *obj)
 {
     json_value *child;
@@ -784,9 +813,9 @@ const char *kibosh_fault_type_name(struct kibosh_fault_base *fault)
     }
 }
 
-/**
- * kibosh_faults 
- */
+/////
+///// kibosh_faults
+/////
 static int fault_array_parse(json_value *arr, struct kibosh_faults **out)
 {
     struct kibosh_faults *faults = NULL;
@@ -938,6 +967,47 @@ struct kibosh_fault_base *find_first_fault(struct kibosh_faults *faults,
     return NULL;
 }
 
+int apply_read_fault(struct kibosh_fault_base *fault, char *buf, int nread,
+                     uint32_t *delay_ms)
+{
+    switch (fault->type) {
+        case KIBOSH_FAULT_TYPE_UNREADABLE:
+            return kibosh_fault_unreadable_apply((struct kibosh_fault_unreadable *) fault,
+                                                 delay_ms);
+        case KIBOSH_FAULT_TYPE_READ_DELAY:
+            kibosh_fault_read_delay_apply((struct kibosh_fault_read_delay *) fault,
+                                          delay_ms);
+            return nread;
+        case KIBOSH_FAULT_TYPE_READ_CORRUPT:
+            return kibosh_fault_read_corrupt_apply((struct kibosh_fault_read_corrupt *) fault,
+                                                   buf, nread, delay_ms);
+        default:
+            *delay_ms = 0;
+            return nread;
+    }
+}
+
+int apply_write_fault(struct kibosh_fault_base *fault, const char **buf, char **dynamic_buf,
+                      int size, uint32_t *delay_ms)
+{
+    switch (fault->type) {
+        case KIBOSH_FAULT_TYPE_UNWRITABLE:
+            return kibosh_fault_unwritable_apply((struct kibosh_fault_unwritable *) fault,
+                                                 dynamic_buf, delay_ms);
+        case KIBOSH_FAULT_TYPE_WRITE_DELAY:
+            return kibosh_fault_write_delay_apply((struct kibosh_fault_write_delay *) fault,
+                                                  dynamic_buf, delay_ms, size);
+        case KIBOSH_FAULT_TYPE_WRITE_CORRUPT:
+            return kibosh_fault_write_corrupt_apply(
+                    (struct kibosh_fault_write_corrupt *) fault, buf, dynamic_buf,
+                    delay_ms, size);
+        default:
+            *delay_ms = 0;
+            *dynamic_buf = NULL;
+            return size;
+    }
+}
+
 void faults_free(struct kibosh_faults *faults)
 {
     struct kibosh_fault_base **iter;
@@ -948,6 +1018,44 @@ void faults_free(struct kibosh_faults *faults)
     free(faults->list);
     faults->list = NULL;
     free(faults);
+}
+
+int corrupt_buffer(char *buf, int size, enum buffer_corruption_type mode, double fraction)
+{
+    int i;
+
+    switch(mode) {
+        case CORRUPT_ZERO:
+            for (i = 0; i < size; i++) {
+                if (drand48() <= fraction) {
+                    buf[i] = '\0';
+                }
+            }
+            return size;
+
+        case CORRUPT_RAND:
+            for (i = 0; i < size; i++) {
+                if (drand48() <= fraction) {
+                    buf[i] = lrand48() & 0xff;
+                }
+            }
+            return size;
+
+        case CORRUPT_RAND_SEQ:
+            for (i = drand48() * size; i < size; i++) {
+                buf[i] = lrand48() & 0xff;
+            }
+            return size;
+
+        case CORRUPT_ZERO_SEQ:
+            i = drand48() * size;
+            memset(buf + i, 0, size - i);
+            return size;
+
+        case CORRUPT_DROP:
+            return drand48() * size;
+    }
+    return size;
 }
 
 // vim: ts=4:sw=4:tw=99:et

@@ -23,26 +23,44 @@
  * The type of kibosh fault.
  */
 enum kibosh_fault_type {
-    KIBOSH_FAULT_TYPE_UNREADABLE = 1,
-    KIBOSH_FAULT_TYPE_READ_DELAY = 2,
-    KIBOSH_FAULT_TYPE_UNWRITABLE = 3,
-    KIBOSH_FAULT_TYPE_WRITE_DELAY = 4,
-    KIBOSH_FAULT_TYPE_READ_CORRUPT = 5,
-    KIBOSH_FAULT_TYPE_WRITE_CORRUPT = 6,
+    KIBOSH_FAULT_TYPE_UNREADABLE,
+    KIBOSH_FAULT_TYPE_READ_DELAY,
+    KIBOSH_FAULT_TYPE_UNWRITABLE,
+    KIBOSH_FAULT_TYPE_WRITE_DELAY,
+    KIBOSH_FAULT_TYPE_READ_CORRUPT,
+    KIBOSH_FAULT_TYPE_WRITE_CORRUPT,
 };
 
 /**
- * Constant flags for byte corruption modes.
- * The mode numbers are chosen to be distinguished form ERRNO numbers (1 to 122).
- * Random position modes are grouped in 1000s range and sequential byte modes are grouped in 1100s range
- * so that more corruption modes can be added later for each group.
+ * Buffer corruption strategies.
+ * TODO: we should not require users to enter a numeric code for these, but have strings
+ * for them instead.
  */
-enum corruption_type {
-    CORRUPT_ZERO = 1000,        // replace bytes at random positions with \0
-    CORRUPT_RAND = 1001,        // replace bytes at random positions with random char value
-    CORRUPT_ZERO_SEQ = 1100,    // replace sequential bytes at the end of the file with \0
-    CORRUPT_RAND_SEQ = 1101,    // replace sequential bytes at the end of the file with random char value
-    CORRUPT_DROP = 1200,        // silently drop bytes at the end of the file
+enum buffer_corruption_type {
+    /**
+     * Replace bytes at random positions with zero bytes.
+     */
+    CORRUPT_ZERO = 1000,
+
+    /**
+     * Replace bytes at random positions with random byte values.
+     */
+    CORRUPT_RAND = 1001,
+
+    /**
+     * Replace sequential bytes at the end of the file with zero bytes.
+     */
+    CORRUPT_ZERO_SEQ = 1100,
+
+    /**
+     * Replace sequential bytes at the end of the file with random bytes values.
+     */
+    CORRUPT_RAND_SEQ = 1101,
+
+    /**
+     * Silently drop bytes at the end of the file.
+     */
+    CORRUPT_DROP = 1200,
 };
 
 /**
@@ -59,31 +77,6 @@ struct kibosh_fault_base {
  * The name of the kibosh_fault_unreadable type.
  */
 #define KIBOSH_FAULT_TYPE_UNREADABLE_NAME "unreadable"
-
-/**
- * The name of the kibosh_fault_read_delay type.
- */
-#define KIBOSH_FAULT_TYPE_READ_DELAY_NAME "read_delay"
-
-/**
- * The name of the kibosh_fault_unwritable type.
- */
-#define KIBOSH_FAULT_TYPE_UNWRITABLE_NAME "unwritable"
-
-/**
- * The name of the kibosh_fault_write_delay type.
- */
-#define KIBOSH_FAULT_TYPE_WRITE_DELAY_NAME "write_delay"
-
-/**
- * The name of the kibosh_fault_read_corrupt type.
- */
-#define KIBOSH_FAULT_TYPE_READ_CORRUPT_NAME "read_corrupt"
-
-/**
- * The name of the kibosh_fault_write_corrupt type.
- */
-#define KIBOSH_FAULT_TYPE_WRITE_CORRUPT_NAME "write_corrupt"
 
 /**
  * The class for Kibosh faults that make files unreadable.
@@ -109,6 +102,11 @@ struct kibosh_fault_unreadable {
      */
     int code;
 };
+
+/**
+ * The name of the kibosh_fault_read_delay type.
+ */
+#define KIBOSH_FAULT_TYPE_READ_DELAY_NAME "read_delay"
 
 /**
  * The class for Kibosh faults that lead to delays when reading.
@@ -141,6 +139,11 @@ struct kibosh_fault_read_delay {
 };
 
 /**
+ * The name of the kibosh_fault_unwritable type.
+ */
+#define KIBOSH_FAULT_TYPE_UNWRITABLE_NAME "unwritable"
+
+/**
  * The class for Kibosh faults that make files unwritable.
  */
 struct kibosh_fault_unwritable {
@@ -164,6 +167,11 @@ struct kibosh_fault_unwritable {
      */
     int code;
 };
+
+/**
+ * The name of the kibosh_fault_write_delay type.
+ */
+#define KIBOSH_FAULT_TYPE_WRITE_DELAY_NAME "write_delay"
 
 /**
  * The class for Kibosh faults that lead to delays when writing.
@@ -196,6 +204,11 @@ struct kibosh_fault_write_delay {
 };
 
 /**
+ * The name of the kibosh_fault_read_corrupt type.
+ */
+#define KIBOSH_FAULT_TYPE_READ_CORRUPT_NAME "read_corrupt"
+
+/**
  * The class for Kibosh faults that lead to corrupted data when reading.
  */
 struct kibosh_fault_read_corrupt {
@@ -217,7 +230,7 @@ struct kibosh_fault_read_corrupt {
     /**
      * The mode of read corruption.
      */
-    enum corruption_type mode;
+    enum buffer_corruption_type mode;
 
     /**
      * Number of corruption fault injected before switching to unwritable fault.
@@ -230,6 +243,11 @@ struct kibosh_fault_read_corrupt {
      */
     double fraction;
 };
+
+/**
+ * The name of the kibosh_fault_write_corrupt type.
+ */
+#define KIBOSH_FAULT_TYPE_WRITE_CORRUPT_NAME "write_corrupt"
 
 /**
  * The class for Kibosh faults that lead to corrupted data when writing.
@@ -253,7 +271,7 @@ struct kibosh_fault_write_corrupt {
     /**
      * The mode of write corruption.
      */
-    enum corruption_type mode;
+    enum buffer_corruption_type mode;
 
     /**
      * Number of corruption fault injected before switching to CORRUPT_DROP with fraction = 1.0.
@@ -358,11 +376,52 @@ struct kibosh_fault_base *find_first_fault(struct kibosh_faults *faults,
                                            const char *path, const char *op);
 
 /**
+ * Apply a fault during a read operation.
+ *
+ * @param fault     The fault to apply.
+ * @param buf       The read buffer.
+ * @param nread     The size of the read buffer.
+ * @param delay_ms  (out param) the number of milliseconds to delay.
+ *
+ * @return          The result to return from the read operation.
+ */
+int apply_read_fault(struct kibosh_fault_base *fault, char *buf, int nread,
+                     uint32_t *delay_ms);
+
+/**
+ * Apply a fault during a write operation.
+ *
+ * @param fault         The fault to apply.
+ * @param buf           (inout) The write buffer.  May be changed if needed.
+ * @param dynamic_buf   (output) If this function allocates a new buffer, it will be
+ *                      stored here, so that the caller can free it later.
+ * @param nread         The size of the write buffer.
+ * @param delay_ms      (out param) the number of milliseconds to delay.
+ *
+ * @return              The result to return from the write operation.
+ */
+int apply_write_fault(struct kibosh_fault_base *fault, const char **buf, char **dynamic_buf,
+                      int size, uint32_t *delay_ms);
+
+/**
  * Free a dynamically allocated kibosh_faults structure.
  *
  * @param faults    The structure to free.
  */
 void faults_free(struct kibosh_faults *faults);
+
+/**
+ * Corrupt a buffer.
+ *
+ * @param buf       The buffer.
+ * @param size      The size.
+ * @param mode      The corruption mode to use.
+ * @param fraction  The fraction of bytes to corrupt.  Only needed for certain modes.
+ *
+ * @return          The new length to use for the buffer.
+ */
+int corrupt_buffer(char *buf, int size, enum buffer_corruption_type mode,
+                    double fraction);
 
 #endif
 

@@ -17,6 +17,7 @@
 #include "file.h"
 #include "fs.h"
 #include "log.h"
+#include "time.h"
 #include "util.h"
 #include "fault.h"
 
@@ -220,107 +221,67 @@ int kibosh_open(const char *path, struct fuse_file_info *info)
     return kibosh_open_impl(path, 0, 0, info);
 }
 
+static char *printf_result_code(char *out, size_t size, int ret)
+{
+    if (ret >= 0) {
+        snprintf(out, size, "%d", ret);
+    } else {
+        snprintf(out, size, "%d (%s)", ret, safe_strerror(ret));
+    }
+    return out;
+}
+
 int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
                 struct fuse_file_info *info)
 {
-    int ret;
-    uint32_t uid UNUSED;
+    int ret = 0;
+    size_t off = 0;
+    uint32_t uid, delay_ms = 0;
     struct kibosh_file *file = (struct kibosh_file*)(uintptr_t)info->fh;
-    //struct kibosh_fs *fs = fuse_get_context()->private_data;
+    struct kibosh_fs *fs = fuse_get_context()->private_data;
+    struct kibosh_fault_base *fault;
+    const char *fault_name = NULL;
+    char scratch[32];
 
-    // TODO: mask EINTR?
     uid = fuse_get_context()->uid;
-    ret = pread(file->fd, buf, size, offset);
-    if (ret < 0) {
-        ret = -errno;
-        DEBUG("kibosh_read(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
-              "= %d (%s)\n", file->path, size, (int64_t)offset, uid,
-              -ret, safe_strerror(-ret));
-    } else {
-        DEBUG("kibosh_read(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
-              "= %d\n", file->path, size, (int64_t)offset, uid, ret);
+    while (off < size) {
+        ret = pread(file->fd, buf + off, size - off, offset + off);
+        if (ret < 0) {
+            ret = -errno;
+            break;
+        } else if (ret == 0) {
+            break;
+        }
+        off += ret;
     }
-    // Our return code is consistent with the direct_io mount option.
+    if (ret <= 0) {
+        DEBUG("kibosh_read(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
+              "= %s\n", file->path, size, (int64_t)offset, uid,
+              printf_result_code(scratch, sizeof(scratch), ret));
+        return ret;
+    }
+    pthread_mutex_lock(&fs->lock);
+    fault = find_first_fault(fs->faults, file->path, "read");
+    if (fault) {
+        fault_name = kibosh_fault_type_name(fault);
+        ret = apply_read_fault(fault, buf, ret, &delay_ms);
+    }
+    pthread_mutex_unlock(&fs->lock);
+    if (delay_ms > 0) {
+        milli_sleep(delay_ms);
+    }
+    if (fault_name) {
+        INFO("kibosh_read(file->path=%s, size=%zd, offset=%"PRId64", uid=%"PRId32", "
+             "fault=%s, delay_ms=%"PRId32 ") = %s\n",
+             file->path, size, (int64_t)offset, uid, fault_name, delay_ms,
+              printf_result_code(scratch, sizeof(scratch), ret));
+    } else {
+        DEBUG("kibosh_read(file->path=%s, size=%zd, offset=%"PRId64", uid=%"PRId32") "
+              "= %s\n", file->path, size, (int64_t)offset, uid,
+              printf_result_code(scratch, sizeof(scratch), ret));
+    }
     return ret;
 }
-
-//    } else {
-//        if (file->type == KIBOSH_FILE_TYPE_NORMAL) {
-//            fault = kibosh_fs_check_read_fault(fs, file->path);
-//
-//            // inject read_corrupt fault
-//            if (fault >= CORRUPT_ZERO) {
-//                int i;
-//                double fraction = 0.0;
-//                char *suffix = NULL;
-//                struct kibosh_fault_base **iter;
-//                struct kibosh_fault_read_corrupt *corrupt_fault;
-//                for (iter = fs->faults->list; *iter; iter++) {
-//                    if (strcmp((*iter)->type, KIBOSH_FAULT_TYPE_READ_CORRUPT) == 0) {
-//                        corrupt_fault = (struct kibosh_fault_read_corrupt*)(*iter);
-//                        fraction = corrupt_fault->fraction;
-//                        suffix = corrupt_fault->suffix;
-//                    }
-//                }
-//
-//                int pos = (int) ((1.0 - fraction) * ret);
-//
-//                switch(fault) {
-//                    case CORRUPT_RAND:
-//                        for (i=0; i < ret; i++) {
-//                            if (drand48() <= fraction) {
-//                                buf[i] = lrand48() & 0xff;
-//                            }
-//                        }
-//                        break;
-//
-//                    case CORRUPT_ZERO:
-//                        for (i=0; i < ret; i++) {
-//                            if (drand48() <= fraction) {
-//                                buf[i] = lrand48() & 0xff;
-//                            }
-//                        }
-//                        break;
-//
-//                    case CORRUPT_RAND_SEQ: ;
-//                        int num_bytes = ret - pos;
-//                        for (i = 0; i < num_bytes; i++) {
-//                            buf[pos + i] = lrand48() & 0xff;
-//                        }
-//                        break;
-//
-//                    case CORRUPT_ZERO_SEQ:
-//                        memset(buf+pos, 0, ret - pos);
-//                        break;
-//
-//                    case CORRUPT_DROP:
-//                        ret = pos;
-//                        break;
-//                }
-//
-//                INFO("[read_corrupt fault injected] kibosh_read(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
-//                              "= read_corrupt{mode=%d, fraction=%g, suffix=%s, ret=%d}\n", file->path, size, (int64_t)offset, uid,
-//                              fault, fraction, suffix, ret);
-//
-//                char buf_read[ret * 2 + 1];
-//                for (i=0; i<ret; ++i) {
-//                    sprintf(buf_read+i*2, "%02X", buf[i]);
-//                }
-//                buf_read[ret*2] = '\0';
-//                INFO("kibosh_read reads: %s\n", buf_read);
-//
-//                return ret;
-//            }
-//
-//            // inject unreadable fault
-//            if (fault) {
-//                INFO("[unreadable fault injected] kibosh_read(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
-//                              "= %d (%s)\n", file->path, size, (int64_t)offset, uid,
-//                              fault, safe_strerror(fault));
-//                return -fault;
-//            }
-//        }
-//    }
 
 int kibosh_release(const char *path UNUSED, struct fuse_file_info *info)
 {
@@ -345,138 +306,53 @@ int kibosh_release(const char *path UNUSED, struct fuse_file_info *info)
     return AS_FUSE_ERR(ret);
 }
 
-int kibosh_write(const char *path UNUSED, const char *ibuf, size_t size, off_t offset,
+int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t offset,
                  struct fuse_file_info *info)
 {
-    int ret;
-    uint32_t uid = fuse_get_context()->uid;
+    int ret = 0;
+    uint32_t delay_ms = 0, uid = fuse_get_context()->uid;
     struct kibosh_file *file = (struct kibosh_file*)(uintptr_t)info->fh;
-    //struct kibosh_fs *fs = fuse_get_context()->private_data;
-//    char *dynamic_buf = NULL;
-//    const char *wbuf = NULL;
+    struct kibosh_fs *fs = fuse_get_context()->private_data;
+    size_t off = 0;
+    char *dynamic_buf = NULL, scratch[32];
+    struct kibosh_fault_base *fault;
+    const char *fault_name = NULL;
 
-    //dynamic_buf = set_up_write_buffer(file->path, ibuf, &wbuf);
-    ret = pwrite(file->fd, ibuf, size, offset);
-    if (ret < 0) {
-        ret = -errno;
-        DEBUG("kibosh_write(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
-              "=  %d (%s)\n", file->path, size, (int64_t)offset, uid, -ret,
-              safe_strerror(-ret));
-    } else {
-        DEBUG("kibosh_write(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
-              "=  %d\n", file->path, size, (int64_t)offset, uid, ret);
+    pthread_mutex_lock(&fs->lock);
+    fault = find_first_fault(fs->faults, file->path, "write");
+    if (fault) {
+        fault_name = kibosh_fault_type_name(fault);
+        ret = apply_write_fault(fault, &buf, &dynamic_buf, size, &delay_ms);
     }
-    //free(dynamic_buf);
-    // Our return code is consistent with the direct_io mount option.
-    // TODO: do we need to change this?
+    pthread_mutex_unlock(&fs->lock);
+    if (ret < 0) {
+        goto done;
+    }
+    if (delay_ms > 0) {
+        milli_sleep(delay_ms);
+    }
+    while (off < size) {
+        ret = pwrite(file->fd, buf + off, size - off, offset + off);
+        if (ret < 0) {
+            ret = -errno;
+            break;
+        }
+        off += ret;
+    }
+
+done:
+    free(dynamic_buf);
+    if (fault_name) {
+        INFO("kibosh_write(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32
+              ", fault=%s) = %s\n", file->path, size, (int64_t)offset, uid, fault_name,
+              printf_result_code(scratch, sizeof(scratch), ret));
+    } else {
+        DEBUG("kibosh_read(file->path=%s, size=%zd, offset=%"PRId64", uid=%"PRId32") "
+              "= %s\n", file->path, size, (int64_t)offset, uid,
+              printf_result_code(scratch, sizeof(scratch), ret));
+    }
     return ret;
 }
-
-//int kibosh_fs_check_read_fault(struct kibosh_fs *fs, const char *path)
-//{
-//    int ret;
-//    pthread_mutex_lock(&fs->lock);
-//    ret = faults_check(fs->faults, path, "read");
-//    pthread_mutex_unlock(&fs->lock);
-//    return ret;
-//}
-//
-//int kibosh_fs_check_write_fault(struct kibosh_fs *fs, const char *path)
-//{
-//    int ret;
-//    pthread_mutex_lock(&fs->lock);
-//    ret = faults_check(fs->faults, path, "write");
-//    pthread_mutex_unlock(&fs->lock);
-//    return ret;
-//}
-
-//char *set_up_write_buffer(const char *path, const char *ibuf, char *const *wbuf)
-//{
-//    if (file->type != KIBOSH_FILE_TYPE_NORMAL) {
-//        *wbuf = ibuf;
-//        return NULL;
-//    }
-//    fault = kibosh_fs_check_write_fault(fs, file->path);
-//
-//        // inject write_corrupt fault
-//        if (fault >= CORRUPT_ZERO) {
-//            int i;
-//            double fraction = 0.0;
-//            char *suffix = NULL;
-//            struct kibosh_fault_base **iter;
-//            struct kibosh_fault_write_corrupt *corrupt_fault;
-//            for (iter = fs->faults->list; *iter; iter++) {
-//                if (strcmp((*iter)->type, KIBOSH_FAULT_TYPE_WRITE_CORRUPT) == 0) {
-//                    corrupt_fault = (struct kibosh_fault_write_corrupt*)(*iter);
-//                    fraction = corrupt_fault->fraction;
-//                    suffix = corrupt_fault->suffix;
-//                }
-//            }
-//
-//            int pos = (int) ((1.0 - fraction) * size);
-//            int buf_size = (int) size;
-//
-//            switch(fault) {
-//                case CORRUPT_RAND:
-//                    for (i=0; i < buf_size; ++i) {
-//                        if (drand48() <= fraction) {
-//                            mutable_buf[i] = lrand48() & 0xff;
-//                        }
-//                    }
-//                    break;
-//
-//                case CORRUPT_ZERO:
-//                    for (i=0; i < buf_size; ++i) {
-//                        if (drand48() <= fraction) {
-//                            mutable_buf[i] = 0;
-//                        }
-//                    }
-//                    break;
-//
-//                case CORRUPT_RAND_SEQ: ;
-//                    int num_bytes = buf_size - pos;
-//                    for (i = 0; i < num_bytes; i++) {
-//                        mutable_buf[pos + i] = lrand48() & 0xff;
-//                    }
-//                    break;
-//
-//                case CORRUPT_ZERO_SEQ:
-//                    memset(mutable_buf+pos, 0, buf_size - pos);
-//                    break;
-//
-//                case CORRUPT_DROP:
-//                    size = pos;
-//                    break;
-//            }
-//            ret = pwrite(file->fd, buf, size, offset);
-//            uid = fuse_get_context()->uid;
-//            INFO("[write_corrupt fault injected] kibosh_write(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
-//                                      "= write_corrupt{mode=%d, fraction=%g, suffix=%s, ret=%d}\n",
-//                                      file->path, size, (int64_t)offset, uid, fault, fraction, suffix, ret);
-//
-//            char buf_write[ret * 2 + 1];
-//            for (i=0; i<ret; ++i) {
-//                sprintf(buf_write+i*2, "%02X", buf[i]);
-//            }
-//            buf_write[ret*2] = '\0';
-//            INFO("kibosh_write writes: %s\n", buf_write);
-//
-//            if (ret >= 0) {
-//                // If pwrite does not return an error, always return the original size of buffer, we want to silently drop part of the data.
-//                return buf_size;
-//            } else {
-//                return ret;
-//            }
-//        }
-//
-//        // inject unwritable fault
-//        if (fault) {
-//            INFO("[unwritable fault injected] kibosh_write(file->path=%s, size=%zd, offset=%" PRId64", uid=%"PRId32") "
-//                          "=  %d (%s)\n", file->path, size, (int64_t)offset, uid, fault,
-//                          safe_strerror(fault));
-//            return -fault;
-//        }
-//    }
 
 const char *kibosh_file_type_str(enum kibosh_file_type type)
 {
