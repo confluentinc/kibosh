@@ -19,7 +19,6 @@
 TARGET=""
 MIRROR=""
 KIBOSH_PID=""
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 TEST_RESULT=""
 
 usage() {
@@ -46,6 +45,15 @@ die() {
     exit 1
 }
 
+KIBOSH_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+if [[ ! -f "${KIBOSH_DIR}/kibosh" ]]; then
+    if [[ -f "./kibosh" ]]; then
+        KIBOSH_DIR="."
+    else
+        die "Unable to locate the kibosh binary."
+    fi
+fi
+
 bg_do() {
     echo "${@}"
     "${@}" &
@@ -54,7 +62,7 @@ bg_do() {
 start_kibosh() {
     # Locate the kibosh binary.  It should be in our current test script
     # directory, because CMake puts it there.
-    KIBOSH_BIN="${SCRIPT_DIR}/kibosh"
+    KIBOSH_BIN="${KIBOSH_DIR}/kibosh"
     [[ -x "${KIBOSH_BIN}" ]] || die "failed to find kibosh binary at ${KIBOSH_BIN}."
 
     # Initialize constants
@@ -87,7 +95,7 @@ simple_test() {
 fs_test() {
     TEST_RESULT="FAILURE"
     echo "*** RUNNING fs_test..."
-    FS_TEST_BIN="${SCRIPT_DIR}/fs_test"
+    FS_TEST_BIN="${KIBOSH_DIR}/fs_test"
     [[ -x "${FS_TEST_BIN}" ]] || die "failed to find fs_test binary at ${FS_TEST_BIN}"
     start_kibosh
     "${FS_TEST_BIN}" "${MIRROR}" || die "${FS_TEST_BIN} failed"
