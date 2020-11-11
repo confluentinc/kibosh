@@ -34,6 +34,9 @@ static struct kibosh_fault_unreadable *kibosh_fault_unreadable_alloc(int code,
     fault->prefix = strdup(prefix);
     if (!fault->prefix)
         abort();
+    fault->suffix = strdup("");
+    if (!fault->suffix)
+        abort();
     fault->code = code;
     return fault;
 }
@@ -81,7 +84,7 @@ static int test_fault_unparse(void)
     EXPECT_NONNULL(fault);
     EXPECT_INT_EQ(101, fault->code);
     str = kibosh_fault_base_unparse((struct kibosh_fault_base*)fault);
-    EXPECT_STR_EQ("\{\"type\":\"unreadable\", \"prefix\":\"/foo/bar\", \"code\":101}", str);
+    EXPECT_STR_EQ("\{\"type\":\"unreadable\", \"prefix\":\"/foo/bar\", \"suffix\":\"\", \"code\":101}", str);
     free(str);
     kibosh_fault_base_free((struct kibosh_fault_base*)fault);
     return 0;
@@ -102,8 +105,8 @@ static int test_faults_unparse(void)
 
     str = faults_unparse(faults);
     EXPECT_STR_EQ("{\"faults\":["
-                           "{\"type\":\"unreadable\", \"prefix\":\"/x\", \"code\":101}, "
-                           "{\"type\":\"unreadable\", \"prefix\":\"/y\", \"code\":102}]}", str);
+                           "{\"type\":\"unreadable\", \"prefix\":\"/x\", \"suffix\":\"\", \"code\":101}, "
+                           "{\"type\":\"unreadable\", \"prefix\":\"/y\", \"suffix\":\"\", \"code\":102}]}", str);
     free(str);
     faults_free(faults);
     return 0;
@@ -112,9 +115,12 @@ static int test_faults_unparse(void)
 static int test_fault_parse(void)
 {
     struct kibosh_fault_unreadable *unreadable;
+    struct kibosh_fault_read_delay *read_delay;
     const char *str = "{\"faults\":["
-                           "{\"type\":\"unreadable\", \"prefix\":\"/z\", \"code\":1}, "
-                           "{\"type\":\"unreadable\", \"prefix\":\"/x\", \"code\":2}]}";
+                           "{\"type\":\"unreadable\", \"prefix\":\"/z\", \"suffix\":\"/abc\", \"code\":1}, "
+                           "{\"type\":\"unreadable\", \"prefix\":\"/x\", \"suffix\":\"\", \"code\":2}, "
+                           "{\"type\":\"read_delay\", \"prefix\":\"/x\", \"suffix\":\"\", "
+                               "\"delay_ms\":100, \"fraction\": 0.5}]}";
     struct kibosh_faults *faults = NULL;
     EXPECT_INT_ZERO(faults_parse(str, &faults));
     EXPECT_NONNULL(faults);
@@ -124,6 +130,10 @@ static int test_fault_parse(void)
     EXPECT_INT_EQ(KIBOSH_FAULT_TYPE_UNREADABLE, faults->list[1]->type);
     unreadable = (struct kibosh_fault_unreadable*)faults->list[1];
     EXPECT_INT_EQ(2, unreadable->code);
+    EXPECT_INT_EQ(KIBOSH_FAULT_TYPE_READ_DELAY, faults->list[2]->type);
+    read_delay = (struct kibosh_fault_read_delay*)faults->list[2];
+    EXPECT_STR_EQ("/x", read_delay->prefix);
+    EXPECT_STR_EQ("", read_delay->suffix);
     faults_free(faults);
     return 0;
 }

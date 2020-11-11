@@ -44,40 +44,31 @@ static void kibosh_fault_unreadable_free(struct kibosh_fault_unreadable *fault)
 
 static struct kibosh_fault_unreadable *kibosh_fault_unreadable_parse(json_value *obj)
 {
+    int ret;
     struct kibosh_fault_unreadable *fault = NULL;
     json_value *code_obj = NULL;
-    json_value *prefix_obj = NULL;
-    json_value *suffix_obj = NULL;
 
-    code_obj = get_child(obj, "code");
-    if ((!code_obj) || (code_obj->type != json_integer)) {
-        INFO("%s: No valid \"code\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    prefix_obj = get_child(obj, "prefix");
-    if ((!prefix_obj) || (prefix_obj->type != json_string)) {
-        INFO("%s: No valid \"prefix\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    suffix_obj = get_child(obj, "suffix");
-    if ((!suffix_obj) || (suffix_obj->type != json_string)) {
-        INFO("%s: No valid \"suffix\" field found in fault object.\n", __func__);
-        goto error;
-    }
     fault = calloc(1, sizeof(*fault));
     if (!fault) {
         INFO("%s: OOM\n", __func__);
         return NULL;
     }
     fault->base.type = KIBOSH_FAULT_TYPE_UNREADABLE;
-    fault->prefix = strdup(prefix_obj->u.string.ptr);
-    if (!fault->prefix) {
-        INFO("%s: OOM\n", __func__);
+    ret = dup_json_str_value(get_child(obj, "prefix"), "/", &fault->prefix);
+    if (ret) {
+        INFO("%s: error reading \"prefix\" field: %s (%d)\n",
+             __func__, safe_strerror(ret), ret);
         goto error;
     }
-    fault->suffix = strdup(suffix_obj->u.string.ptr);
-    if (!fault->suffix) {
-        INFO("%s: OOM\n", __func__);
+    ret = dup_json_str_value(get_child(obj, "suffix"), "", &fault->suffix);
+    if (ret) {
+        INFO("%s: error reading \"suffix\" field: %s (%d)\n",
+             __func__, safe_strerror(ret), ret);
+        goto error;
+    }
+    code_obj = get_child(obj, "code");
+    if ((!code_obj) || (code_obj->type != json_integer)) {
+        INFO("%s: No valid \"code\" field found in fault object.\n", __func__);
         goto error;
     }
     fault->code = code_obj->u.integer;
@@ -137,25 +128,14 @@ static void kibosh_fault_read_delay_free(struct kibosh_fault_read_delay *fault)
 
 static struct kibosh_fault_read_delay *kibosh_fault_read_delay_parse(json_value *obj)
 {
+    int ret;
     struct kibosh_fault_read_delay *fault = NULL;
     json_value *delay_ms_obj = NULL;
-    json_value *prefix_obj = NULL;
-    json_value *suffix_obj = NULL;
     json_value *fraction_obj = NULL;
 
     delay_ms_obj = get_child(obj, "delay_ms");
     if ((!delay_ms_obj) || (delay_ms_obj->type != json_integer)) {
         INFO("%s: No valid \"delay_ms\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    prefix_obj = get_child(obj, "prefix");
-    if ((!prefix_obj) || (prefix_obj->type != json_string)) {
-        INFO("%s: No valid \"prefix\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    suffix_obj = get_child(obj, "suffix");
-    if ((!suffix_obj) || (suffix_obj->type != json_string)) {
-        INFO("%s: No valid \"suffix\" field found in fault object.\n", __func__);
         goto error;
     }
     fraction_obj = get_child(obj, "fraction");
@@ -169,14 +149,16 @@ static struct kibosh_fault_read_delay *kibosh_fault_read_delay_parse(json_value 
         return NULL;
     }
     fault->base.type = KIBOSH_FAULT_TYPE_READ_DELAY;
-    fault->prefix = strdup(prefix_obj->u.string.ptr);
-    if (!fault->prefix) {
-        INFO("%s: OOM\n", __func__);
+    ret = dup_json_str_value(get_child(obj, "prefix"), "/", &fault->prefix);
+    if (ret) {
+        INFO("%s: error reading \"prefix\" field: %s (%d)\n",
+             __func__, safe_strerror(ret), ret);
         goto error;
     }
-    fault->suffix = strdup(suffix_obj->u.string.ptr);
-    if (!fault->suffix) {
-        INFO("%s: OOM\n", __func__);
+    ret = dup_json_str_value(get_child(obj, "suffix"), "", &fault->suffix);
+    if (ret) {
+        INFO("%s: error reading \"suffix\" field: %s (%d)\n",
+             __func__, safe_strerror(ret), ret);
         goto error;
     }
     fault->delay_ms = delay_ms_obj->u.integer;
@@ -238,24 +220,13 @@ static void kibosh_fault_unwritable_free(struct kibosh_fault_unwritable *fault)
 
 static struct kibosh_fault_unwritable *kibosh_fault_unwritable_parse(json_value *obj)
 {
+    int ret;
     struct kibosh_fault_unwritable *fault = NULL;
     json_value *code_obj = NULL;
-    json_value *prefix_obj = NULL;
-    json_value *suffix_obj = NULL;
 
     code_obj = get_child(obj, "code");
     if ((!code_obj) || (code_obj->type != json_integer)) {
         INFO("%s: No valid \"code\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    prefix_obj = get_child(obj, "prefix");
-    if ((!prefix_obj) || (prefix_obj->type != json_string)) {
-        INFO("%s: No valid \"prefix\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    suffix_obj = get_child(obj, "suffix");
-    if ((!suffix_obj) || (suffix_obj->type != json_string)) {
-        INFO("%s: No valid \"suffix\" field found in fault object.\n", __func__);
         goto error;
     }
     fault = calloc(1, sizeof(*fault));
@@ -264,14 +235,16 @@ static struct kibosh_fault_unwritable *kibosh_fault_unwritable_parse(json_value 
         return NULL;
     }
     fault->base.type = KIBOSH_FAULT_TYPE_UNWRITABLE;
-    fault->prefix = strdup(prefix_obj->u.string.ptr);
-    if (!fault->prefix) {
-        INFO("%s: OOM\n", __func__);
+    ret = dup_json_str_value(get_child(obj, "prefix"), "/", &fault->prefix);
+    if (ret) {
+        INFO("%s: error reading \"prefix\" field: %s (%d)\n",
+             __func__, safe_strerror(ret), ret);
         goto error;
     }
-    fault->suffix = strdup(suffix_obj->u.string.ptr);
-    if (!fault->suffix) {
-        INFO("%s: OOM\n", __func__);
+    ret = dup_json_str_value(get_child(obj, "suffix"), "", &fault->suffix);
+    if (ret) {
+        INFO("%s: error reading \"suffix\" field: %s (%d)\n",
+             __func__, safe_strerror(ret), ret);
         goto error;
     }
     fault->code = code_obj->u.integer;
@@ -332,25 +305,14 @@ static void kibosh_fault_write_delay_free(struct kibosh_fault_write_delay *fault
 
 static struct kibosh_fault_write_delay *kibosh_fault_write_delay_parse(json_value *obj)
 {
+    int ret;
     struct kibosh_fault_write_delay *fault = NULL;
     json_value *delay_ms_obj = NULL;
-    json_value *prefix_obj = NULL;
-    json_value *suffix_obj = NULL;
     json_value *fraction_obj = NULL;
 
     delay_ms_obj = get_child(obj, "delay_ms");
     if ((!delay_ms_obj) || (delay_ms_obj->type != json_integer)) {
         INFO("%s: No valid \"delay_ms\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    prefix_obj = get_child(obj, "prefix");
-    if ((!prefix_obj) || (prefix_obj->type != json_string)) {
-        INFO("%s: No valid \"prefix\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    suffix_obj = get_child(obj, "suffix");
-    if ((!suffix_obj) || (suffix_obj->type != json_string)) {
-        INFO("%s: No valid \"suffix\" field found in fault object.\n", __func__);
         goto error;
     }
     fraction_obj = get_child(obj, "fraction");
@@ -364,14 +326,16 @@ static struct kibosh_fault_write_delay *kibosh_fault_write_delay_parse(json_valu
         return NULL;
     }
     fault->base.type = KIBOSH_FAULT_TYPE_WRITE_DELAY;
-    fault->prefix = strdup(prefix_obj->u.string.ptr);
-    if (!fault->prefix) {
-        INFO("%s: OOM\n", __func__);
+    ret = dup_json_str_value(get_child(obj, "prefix"), "/", &fault->prefix);
+    if (ret) {
+        INFO("%s: error reading \"prefix\" field: %s (%d)\n",
+             __func__, safe_strerror(ret), ret);
         goto error;
     }
-    fault->suffix = strdup(suffix_obj->u.string.ptr);
-    if (!fault->suffix) {
-        INFO("%s: OOM\n", __func__);
+    ret = dup_json_str_value(get_child(obj, "suffix"), "", &fault->suffix);
+    if (ret) {
+        INFO("%s: error reading \"suffix\" field: %s (%d)\n",
+             __func__, safe_strerror(ret), ret);
         goto error;
     }
     fault->delay_ms = delay_ms_obj->u.integer;
@@ -435,26 +399,15 @@ static void kibosh_fault_read_corrupt_free(struct kibosh_fault_read_corrupt *fau
 
 static struct kibosh_fault_read_corrupt *kibosh_fault_read_corrupt_parse(json_value *obj)
 {
+    int ret;
     struct kibosh_fault_read_corrupt *fault = NULL;
     json_value *mode_obj = NULL;
     json_value *count_obj = NULL;
-    json_value *prefix_obj = NULL;
     json_value *fraction_obj = NULL;
-    json_value *suffix_obj = NULL;
 
     mode_obj = get_child(obj, "mode");
     if ((!mode_obj) || (mode_obj->type != json_integer)) {
         INFO("%s: No valid \"mode\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    prefix_obj = get_child(obj, "prefix");
-    if ((!prefix_obj) || (prefix_obj->type != json_string)) {
-        INFO("%s: No valid \"prefix\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    suffix_obj = get_child(obj, "suffix");
-    if ((!suffix_obj) || (suffix_obj->type != json_string)) {
-        INFO("%s: No valid \"suffix\" field found in fault object.\n", __func__);
         goto error;
     }
     fraction_obj = get_child(obj, "fraction");
@@ -473,14 +426,16 @@ static struct kibosh_fault_read_corrupt *kibosh_fault_read_corrupt_parse(json_va
         return NULL;
     }
     fault->base.type = KIBOSH_FAULT_TYPE_READ_CORRUPT;
-    fault->prefix = strdup(prefix_obj->u.string.ptr);
-    if (!fault->prefix) {
-        INFO("%s: OOM\n", __func__);
+    ret = dup_json_str_value(get_child(obj, "prefix"), "/", &fault->prefix);
+    if (ret) {
+        INFO("%s: error reading \"prefix\" field: %s (%d)\n",
+             __func__, safe_strerror(ret), ret);
         goto error;
     }
-    fault->suffix = strdup(suffix_obj->u.string.ptr);
-    if (!fault->suffix) {
-        INFO("%s: OOM\n", __func__);
+    ret = dup_json_str_value(get_child(obj, "suffix"), "", &fault->suffix);
+    if (ret) {
+        INFO("%s: error reading \"suffix\" field: %s (%d)\n",
+             __func__, safe_strerror(ret), ret);
         goto error;
     }
     fault->mode = mode_obj->u.integer;
@@ -552,26 +507,15 @@ static void kibosh_fault_write_corrupt_free(struct kibosh_fault_write_corrupt *f
 
 static struct kibosh_fault_write_corrupt *kibosh_fault_write_corrupt_parse(json_value *obj)
 {
+    int ret;
     struct kibosh_fault_write_corrupt *fault = NULL;
     json_value *mode_obj = NULL;
     json_value *count_obj = NULL;
-    json_value *prefix_obj = NULL;
     json_value *fraction_obj = NULL;
-    json_value *suffix_obj = NULL;
 
     mode_obj = get_child(obj, "mode");
     if ((!mode_obj) || (mode_obj->type != json_integer)) {
         INFO("%s: No valid \"mode\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    prefix_obj = get_child(obj, "prefix");
-    if ((!prefix_obj) || (prefix_obj->type != json_string)) {
-        INFO("%s: No valid \"prefix\" field found in fault object.\n", __func__);
-        goto error;
-    }
-    suffix_obj = get_child(obj, "suffix");
-    if ((!suffix_obj) || (suffix_obj->type != json_string)) {
-        INFO("%s: No valid \"suffix\" field found in fault object.\n", __func__);
         goto error;
     }
     fraction_obj = get_child(obj, "fraction");
@@ -590,14 +534,16 @@ static struct kibosh_fault_write_corrupt *kibosh_fault_write_corrupt_parse(json_
         return NULL;
     }
     fault->base.type = KIBOSH_FAULT_TYPE_WRITE_CORRUPT;
-    fault->prefix = strdup(prefix_obj->u.string.ptr);
-    if (!fault->prefix) {
-        INFO("%s: OOM\n", __func__);
+    ret = dup_json_str_value(get_child(obj, "prefix"), "/", &fault->prefix);
+    if (ret) {
+        INFO("%s: error reading \"prefix\" field: %s (%d)\n",
+             __func__, safe_strerror(ret), ret);
         goto error;
     }
-    fault->suffix = strdup(suffix_obj->u.string.ptr);
-    if (!fault->suffix) {
-        INFO("%s: OOM\n", __func__);
+    ret = dup_json_str_value(get_child(obj, "suffix"), "", &fault->suffix);
+    if (ret) {
+        INFO("%s: error reading \"suffix\" field: %s (%d)\n",
+             __func__, safe_strerror(ret), ret);
         goto error;
     }
     fault->mode = mode_obj->u.integer;

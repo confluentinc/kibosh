@@ -67,6 +67,20 @@ char *join_strs(char **strs);
 json_value *get_child(json_value *obj, const char *name);
 
 /**
+ * Given a JSON object, try to read it as a string.
+ * If it is null or not present, then use the default.
+ *
+ * @param obj       The JSON object.
+ * @param def       The default string to use.
+* @param out       (out parameter) a copy of the string.
+ *
+ * @return          -EINVAL if the object had a bad type,
+ *                  -ENOMEM if we couldn't allocate memory,
+ *                  0 on success.
+ */
+int dup_json_str_value(json_value *obj, const char *def, char **out);
+
+/**
  * Convert a POSIX-open flags integer to a string.
  *
  * @param flags     The flags.

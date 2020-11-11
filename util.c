@@ -91,6 +91,26 @@ json_value *get_child(json_value *obj, const char *name)
     return NULL;
 }
 
+int dup_json_str_value(json_value *obj, const char *def, char **out)
+{
+    const char *input = def;
+    char *output;
+
+    if (obj) {
+        if (obj->type == json_string) {
+            input = obj->u.string.ptr;
+        } else if (obj->type != json_string) {
+            return -EINVAL;
+        }
+    }
+    output = strdup(input);
+    if (!output) {
+        return -ENOMEM;
+    }
+    *out = output;
+    return 0;
+}
+
 int open_flags_to_str(int flags, char *str, size_t max_len)
 {
     const char *prefix = "";
