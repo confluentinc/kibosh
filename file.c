@@ -250,6 +250,7 @@ int kibosh_read(const char *path UNUSED, char *buf, size_t size, off_t offset,
             ret = -errno;
             break;
         } else if (ret == 0) {
+            ret = off;
             break;
         }
         off += ret;
@@ -339,6 +340,7 @@ int kibosh_write(const char *path UNUSED, const char *buf, size_t size, off_t of
         }
         off += ret;
     }
+    ret = off;
 
 done:
     free(dynamic_buf);
