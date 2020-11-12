@@ -14,6 +14,7 @@
  * limitations under the License.
  **/
 
+#include "log.h"
 #include "time.h"
 
 #include <errno.h>
@@ -23,16 +24,24 @@
 
 void milli_sleep(uint32_t delay_ms)
 {
+    int ret;
     struct timespec deadline;
     uint32_t delay_seconds;
     // This should never fail... on Linux, at least.
-    if (clock_gettime(CLOCK_MONOTONIC, &deadline)) {
+    ret = clock_gettime(CLOCK_MONOTONIC, &deadline);
+    if (ret) {
+        INFO("milli_sleep: clock_gettime failed with error %s (%d)\n",
+             safe_strerror(ret), ret);
         abort();
     }
     delay_seconds = delay_ms;
     delay_seconds /= 1000;
     deadline.tv_sec += delay_seconds;
     deadline.tv_nsec += (delay_ms - (delay_seconds * 1000)) * 1000000;
+    if (deadline.tv_nsec > 1000000000L) {
+        deadline.tv_nsec -= 1000000000L;
+        deadline.tv_sec++;
+    }
     // We use clock_nanosleep here in an attempt to avoid issues that might occur if the wall-clock
     // time is changed.  The function may return early if it is interrupted by a signal.
     while (1) {
@@ -41,6 +50,8 @@ void milli_sleep(uint32_t delay_ms)
             break;
         } else if (rval != EINTR) {
             // Error codes other than EINTR are bad news.
+            INFO("milli_sleep: clock_nanosleep failed with error %s (%d)\n",
+                 safe_strerror(rval), rval);
             abort();
         }
     }
