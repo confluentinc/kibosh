@@ -19,6 +19,8 @@
 
 #define DROP_CACHES_PATH "/proc/sys/vm/drop_caches"
 
+struct drop_cache_thread;
+
 /**
  * Drop the cache by writing a 1 to the given path.
  *

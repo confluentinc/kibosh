@@ -38,7 +38,6 @@
 #include <pthread.h>
 
 static struct fuse_operations kibosh_oper;
-int p1;
 
 // FUSE options which we always set.
 static const char * const MANDATORY_FUSE_OPTIONS[] = {
@@ -106,16 +105,6 @@ static int kibosh_process_option(void *data UNUSED, const char *arg UNUSED,
             break;
     }
     return 1;
-}
-
-void *clear_cache()
-{
-    for(;;)
-    {
-        int sret = system("sudo sh -c \"echo 1 > /proc/sys/vm/drop_caches\"");
-        DEBUG("kibosh_main: clear cache call returns: %d\n", sret);
-        milli_sleep(1000);
-    }
 }
 
 int main(int argc, char *argv[])
@@ -231,26 +220,9 @@ int main(int argc, char *argv[])
     srand48(conf->random_seed);
     INFO("kibosh_main: random seed is set to %ld.\n", conf->random_seed);
 
-    /*
-     * Start a process to clear page cache every 1 second.
-     * The clear page cache process becomes necessary after direct_io option is removed.
-     * It serves two purposes:
-     * 1. preventing page cache from building up
-     * 2. force read and write calls to access the filesystem instead of the page cache to ensure fault can be injected
-     */
-    p1 = fork();
-
-    if (p1 > 0) {
-        /* Run main FUSE loop. */
-        ret = fuse_main(args.argc, args.argv, &kibosh_oper, fs);
-    } else {
-        clear_cache();
-    }
+    ret = fuse_main(args.argc, args.argv, &kibosh_oper, fs);
 
 done:
-    if (p1 > 0) {
-        kill(p1, SIGKILL); // kills the clear cache process.
-    }
     fuse_opt_free_args(&args);
     kibosh_conf_free(conf);
     free(conf_str);
@@ -264,13 +236,19 @@ done:
 
 static void *kibosh_init(struct fuse_conn_info *conn)
 {
+    struct kibosh_fs *fs = fuse_get_context()->private_data;
     conn->want = FUSE_CAP_ASYNC_READ |
         FUSE_CAP_ATOMIC_O_TRUNC	|
         FUSE_CAP_BIG_WRITES	|
         FUSE_CAP_SPLICE_WRITE |
         FUSE_CAP_SPLICE_MOVE |
         FUSE_CAP_SPLICE_READ;
-    return fuse_get_context()->private_data;
+    fs->drop_cache_thread = drop_cache_thread_start(DROP_CACHES_PATH, 1);
+    if (!fs->drop_cache_thread) {
+        INFO("kibosh_init: failed to create drop_cache_thread.  Exiting\n");
+        abort();
+    }
+    return fs;
 }
 
 static void kibosh_destroy(void *fs)

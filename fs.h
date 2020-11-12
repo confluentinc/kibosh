@@ -19,6 +19,8 @@
 
 #include <pthread.h> // for pthread_mutex_t
 
+#include "drop_cache.h"
+
 #define KIBOSH_CONTROL          "kibosh_control"
 #define KIBOSH_CONTROL_PATH     ("/" KIBOSH_CONTROL)
 
@@ -26,6 +28,8 @@ struct kibosh_conf;
 struct stat;
 
 struct kibosh_fs {
+    struct drop_cache_thread *drop_cache_thread;
+
     /**
      * The root of the pass-through filesystem.  Immutable.
      */

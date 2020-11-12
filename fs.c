@@ -149,6 +149,10 @@ void kibosh_fs_free(struct kibosh_fs *fs)
 {
     if (!fs)
         return;
+    if (fs->drop_cache_thread) {
+        drop_cache_thread_join(fs->drop_cache_thread);
+        fs->drop_cache_thread = NULL;
+    }
     if (fs->root) {
         free(fs->root);
         fs->root = NULL;
