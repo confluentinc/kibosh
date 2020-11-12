@@ -60,6 +60,7 @@ set(VALGRIND_OPTIONS --tool=memcheck --leak-check=full --trace-children=yes --er
 
 add_executable(kibosh
     conf.c
+    drop_cache.c
     fault.c
     file.c
     fs.c
@@ -158,12 +159,25 @@ target_link_libraries(util_unit utest)
 add_utest(util_unit)
 
 add_executable(time_unit
-    time_unit.c
-    time.c
+    io.c
+    log.c
     test.c
+    time.c
+    time_unit.c
 )
 target_link_libraries(time_unit utest)
 add_utest(time_unit)
+
+add_executable(drop_cache_unit
+    drop_cache.c
+    drop_cache_unit.c
+    io.c
+    log.c
+    test.c
+    time.c
+)
+target_link_libraries(drop_cache_unit pthread utest)
+add_utest(drop_cache_unit)
 
 #add_custom_target(
 #    copy_test_script ALL
