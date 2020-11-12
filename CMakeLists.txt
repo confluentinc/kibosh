@@ -170,8 +170,8 @@ add_utest(time_unit)
 #    DEPENDS systest.sh
 #    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/systest.sh" "${CMAKE_BINARY_DIR}/systest.sh"
 #)
-
-find_program (BASH_PROGRAM bash)
-if (BASH_PROGRAM)
-    add_test(systest.sh ${BASH_PROGRAM} ${CMAKE_CURRENT_BINARY_DIR}/systest.sh)
-endif (BASH_PROGRAM)
+#
+#find_program (BASH_PROGRAM bash)
+#if (BASH_PROGRAM)
+#    add_test(systest.sh ${BASH_PROGRAM} ${CMAKE_SOURCE_DIR}/systest.sh)
+#endif (BASH_PROGRAM)
